@@ -4,7 +4,7 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class User(db.Model):
-    _tablename_ = 'users'
+    __tablename__ = 'users'  # Corrected from _tablename_
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -12,7 +12,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     donations = db.relationship('Donation', backref='donor', lazy=True)
 
-    def _repr_(self):
+    def __repr__(self):  # Corrected from _repr_
         return f"<User {self.username}>"
 
     def to_dict(self):
@@ -24,7 +24,7 @@ class User(db.Model):
         }
 
 class Charity(db.Model):
-    _tablename_ = 'charities'
+    __tablename__ = 'charities'  # Corrected from _tablename_
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -34,7 +34,7 @@ class Charity(db.Model):
     donations = db.relationship('Donation', backref='charity', lazy=True)
     beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True)
 
-    def _repr_(self):
+    def __repr__(self):  # Corrected from _repr_
         return f"<Charity {self.name}>"
 
     def to_dict(self):
