@@ -1,28 +1,30 @@
-from flask import Flask, jsonify, request, abort, session
+from flask import Flask, jsonify, request, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt, get_jwt_identity
 import bcrypt
-from flask_session import Session  # Import Flask-Session
+import os
 
 from models import db, User, Charity, Donation, Beneficiary
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'your_jwt_secret_key'  # Change this to a secure key
-app.config['SECRET_KEY'] = 'your_flask_secret_key'  # Add this line for session management
-app.config['SESSION_TYPE'] = 'filesystem'  # Use filesystem-based sessions
-app.config['SESSION_PERMANENT'] = False
-app.config['SESSION_USE_SIGNER'] = True
+app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
 
 # Initialize extensions
 db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app)
-Session(app)  # Initialize Flask-Session
+
+BLACKLIST = set()
+
+@jwt.token_in_blocklist_loader
+def check_if_token_in_blacklist(jwt_header, jwt_payload):
+    jti = jwt_payload['jti']
+    return jti in BLACKLIST
 
 @app.route('/')
 def home():
@@ -52,22 +54,21 @@ def login_user():
     user = User.query.filter_by(email=data['email']).first()
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
         access_token = create_access_token(identity={'id': user.id, 'username': user.username})
-        session['access_token'] = access_token  # Store token in session
         return jsonify(access_token=access_token), 200
     return jsonify({'msg': 'Invalid email or password'}), 401
-
-@app.route('/users/logout', methods=['POST'])
-@jwt_required()
-def logout_user():
-    # Clear session
-    session.pop('access_token', None)
-    return jsonify({'msg': 'Logged out successfully'}), 200
 
 @app.route('/users/protected', methods=['GET'])
 @jwt_required()
 def protected_user():
     current_user = get_jwt_identity()
     return jsonify(logged_in_as=current_user), 200
+
+@app.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    jti = get_jwt()['jti']
+    BLACKLIST.add(jti)
+    return jsonify(msg="Logout successful"), 200
 
 # Charity Routes
 @app.route('/charities', methods=['GET'])
