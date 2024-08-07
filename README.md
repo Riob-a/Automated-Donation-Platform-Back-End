@@ -28,9 +28,10 @@ Git clone https://github.com/Riob-a/Automated-Donation-Platform-Back-end
 1. cd into the Back-end folder
 2. Run pipenv install && pipenv shell
 3. install :-
-...
+```
 Flask, CORS, Migrate, JWT, bcrypt, Swagger
-...
+```
+
 4. Initialize the db(flask db init)
 5. Migrate(flask db migrate -m "<your message>")
 6. Upgrade(flask db upgrade)
