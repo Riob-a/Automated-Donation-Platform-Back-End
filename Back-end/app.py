@@ -326,8 +326,12 @@ def delete_charity(charity_id):
     responses:
       204:
         description: Charity deleted successfully
+      404:
+        description: Charity not found
     """
-    charity = Charity.query.get_or_404(charity_id)
+    charity = Charity.query.get(charity_id)
+    if not charity:
+        return jsonify({'msg': 'Charity not found'}), 404
     db.session.delete(charity)
     db.session.commit()
     return '', 204
@@ -351,17 +355,16 @@ def create_donation():
           properties:
             amount:
               type: number
-              format: float
-              example: 100.50
-            anonymous:
-              type: boolean
-              example: false
+              example: 100.00
             user_id:
               type: integer
               example: 1
             charity_id:
               type: integer
               example: 1
+            anonymous:
+              type: boolean
+              example: false
     responses:
       201:
         description: Donation created successfully
@@ -369,9 +372,9 @@ def create_donation():
     data = request.get_json()
     new_donation = Donation(
         amount=data['amount'],
-        anonymous=data.get('anonymous', False),
         user_id=data['user_id'],
-        charity_id=data['charity_id']
+        charity_id=data['charity_id'],
+        anonymous=data.get('anonymous', False)
     )
     db.session.add(new_donation)
     db.session.commit()
@@ -398,48 +401,15 @@ def get_donation(donation_id):
               type: integer
             amount:
               type: number
-              format: float
-            anonymous:
-              type: boolean
             user_id:
               type: integer
             charity_id:
               type: integer
-            timestamp:
-              type: string
+            anonymous:
+              type: boolean
     """
     donation = Donation.query.get_or_404(donation_id)
     return jsonify(donation.to_dict()), 200
-
-@app.route('/donations', methods=['GET'])
-def list_donations():
-    """
-    List all donations
-    ---
-    responses:
-      200:
-        description: A list of all donations
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              amount:
-                type: number
-                format: float
-              anonymous:
-                type: boolean
-              user_id:
-                type: integer
-              charity_id:
-                type: integer
-              timestamp:
-                type: string
-    """
-    donations = Donation.query.all()
-    return jsonify([donation.to_dict() for donation in donations]), 200
 
 @app.route('/donations/<int:donation_id>', methods=['DELETE'])
 def delete_donation(donation_id):
@@ -455,40 +425,17 @@ def delete_donation(donation_id):
     responses:
       204:
         description: Donation deleted successfully
+      404:
+        description: Donation not found
     """
-    donation = Donation.query.get_or_404(donation_id)
+    donation = Donation.query.get(donation_id)
+    if not donation:
+        return jsonify({'msg': 'Donation not found'}), 404
     db.session.delete(donation)
     db.session.commit()
     return '', 204
 
 # Beneficiary Routes
-@app.route('/beneficiaries', methods=['GET'])
-def list_beneficiaries():
-    """
-    List all beneficiaries
-    ---
-    responses:
-      200:
-        description: A list of all beneficiaries
-        schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              school:
-                type: string
-              supplies_needed:
-                type: string
-              status:
-                type: string
-    """
-    beneficiaries = Beneficiary.query.all()
-    return jsonify([beneficiary.to_dict() for beneficiary in beneficiaries]), 200
-
 @app.route('/beneficiaries', methods=['POST'])
 def create_beneficiary():
     """
@@ -502,20 +449,18 @@ def create_beneficiary():
           type: object
           required:
             - name
-            - school
+            - story
+            - charity_id
           properties:
             name:
               type: string
-              example: "Jane Doe"
-            school:
+              example: "Beneficiary Name"
+            story:
               type: string
-              example: "School Name"
-            supplies_needed:
-              type: string
-              example: "Sanitary towels"
-            status:
-              type: string
-              example: "Pending"
+              example: "Beneficiary's story"
+            charity_id:
+              type: integer
+              example: 1
     responses:
       201:
         description: Beneficiary created successfully
@@ -523,9 +468,8 @@ def create_beneficiary():
     data = request.get_json()
     new_beneficiary = Beneficiary(
         name=data['name'],
-        school=data['school'],
-        supplies_needed=data.get('supplies_needed'),
-        status=data.get('status', 'Pending')
+        story=data['story'],
+        charity_id=data['charity_id']
     )
     db.session.add(new_beneficiary)
     db.session.commit()
@@ -552,12 +496,10 @@ def get_beneficiary(beneficiary_id):
               type: integer
             name:
               type: string
-            school:
+            story:
               type: string
-            supplies_needed:
-              type: string
-            status:
-              type: string
+            charity_id:
+              type: integer
     """
     beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
     return jsonify(beneficiary.to_dict()), 200
@@ -581,16 +523,10 @@ def update_beneficiary(beneficiary_id):
           properties:
             name:
               type: string
-              example: "Jane Smith"
-            school:
+              example: "Updated Beneficiary Name"
+            story:
               type: string
-              example: "Updated School Name"
-            supplies_needed:
-              type: string
-              example: "Updated supplies needed"
-            status:
-              type: string
-              example: "Approved"
+              example: "Updated story of the beneficiary"
     responses:
       200:
         description: Beneficiary updated successfully
@@ -599,12 +535,8 @@ def update_beneficiary(beneficiary_id):
     data = request.get_json()
     if 'name' in data:
         beneficiary.name = data['name']
-    if 'school' in data:
-        beneficiary.school = data['school']
-    if 'supplies_needed' in data:
-        beneficiary.supplies_needed = data['supplies_needed']
-    if 'status' in data:
-        beneficiary.status = data['status']
+    if 'story' in data:
+        beneficiary.story = data['story']
     db.session.commit()
     return jsonify(beneficiary.to_dict()), 200
 
@@ -622,8 +554,12 @@ def delete_beneficiary(beneficiary_id):
     responses:
       204:
         description: Beneficiary deleted successfully
+      404:
+        description: Beneficiary not found
     """
-    beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
+    beneficiary = Beneficiary.query.get(beneficiary_id)
+    if not beneficiary:
+        return jsonify({'msg': 'Beneficiary not found'}), 404
     db.session.delete(beneficiary)
     db.session.commit()
     return '', 204

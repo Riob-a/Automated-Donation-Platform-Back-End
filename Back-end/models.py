@@ -4,7 +4,7 @@ from datetime import datetime
 db = SQLAlchemy()
 
 class User(db.Model):
-    __tablename__ = 'users'  # Corrected from _tablename_
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -12,7 +12,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     donations = db.relationship('Donation', backref='donor', lazy=True)
 
-    def __repr__(self):  # Corrected from _repr_
+    def __repr__(self):
         return f"<User {self.username}>"
 
     def to_dict(self):
@@ -24,17 +24,17 @@ class User(db.Model):
         }
 
 class Charity(db.Model):
-    __tablename__ = 'charities'  # Corrected from _tablename_
+    __tablename__ = 'charities'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
     website = db.Column(db.String(200))
     approved = db.Column(db.Boolean, default=False)
     image_url = db.Column(db.String(500))  # New field for image URL
-    donations = db.relationship('Donation', backref='charity', lazy=True)
-    beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True)
+    donations = db.relationship('Donation', backref='charity', lazy=True, passive_deletes=True)
+    beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True, passive_deletes=True)
 
-    def __repr__(self):  # Corrected from _repr_
+    def __repr__(self):
         return f"<Charity {self.name}>"
 
     def to_dict(self):
@@ -54,7 +54,7 @@ class Donation(db.Model):
     anonymous = db.Column(db.Boolean, default=False)
     donation_date = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    charity_id = db.Column(db.Integer, db.ForeignKey('charities.id'), nullable=False)
+    charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
 
     def __repr__(self):
         return f"<Donation {self.amount} by User {self.user_id}>"
@@ -74,7 +74,7 @@ class Beneficiary(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     story = db.Column(db.Text, nullable=True)
-    charity_id = db.Column(db.Integer, db.ForeignKey('charities.id'), nullable=False)
+    charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
 
     def __repr__(self):
         return f"<Beneficiary {self.name}>"
@@ -94,3 +94,8 @@ class TokenBlacklist(db.Model):
     
     def __repr__(self):
         return f"<TokenBlacklist {self.token}>"
+
+# Initialize the database
+def init_db(app):
+    with app.app_context():
+        db.create_all()
