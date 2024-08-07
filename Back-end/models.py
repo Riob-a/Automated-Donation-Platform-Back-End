@@ -94,6 +94,30 @@ class TokenBlacklist(db.Model):
     
     def __repr__(self):
         return f"<TokenBlacklist {self.token}>"
+    
+class Application(db.Model):
+    __tablename__ = 'applications'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    website = db.Column(db.String(200))
+    image_url = db.Column(db.String(500))
+    date_submitted = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='Pending')  # Can be 'Pending', 'Approved', 'Rejected'
+
+    def __repr__(self):
+        return f"<Application {self.name}>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'website': self.website,
+            'image_url': self.image_url,
+            'date_submitted': self.date_submitted,
+            'status': self.status
+        }
 
 # Initialize the database
 def init_db(app):
