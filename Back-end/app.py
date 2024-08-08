@@ -561,6 +561,37 @@ def delete_donation(donation_id):
     return '', 204
 
 # Beneficiary Routes
+@app.route('/beneficiaries', methods=['GET'])
+def list_beneficiaries():
+    """
+    List all beneficiaries
+    ---
+    responses:
+      200:
+        description: List of all beneficiaries
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: Jane Doe
+                  story:
+                    type: string
+                    example: A story about Jane Doe
+                  charity_id:
+                    type: integer
+                    example: 1
+    """
+    beneficiaries = Beneficiary.query.all()
+    return jsonify([beneficiary.to_dict() for beneficiary in beneficiaries]), 200
+
 @app.route('/beneficiaries', methods=['POST'])
 def create_beneficiary():
     """
