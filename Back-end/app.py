@@ -433,65 +433,20 @@ def delete_charity(charity_id):
 # Donation Routes
 @app.route('/donations', methods=['POST'])
 def create_donation():
-    """
-    Create a new donation
-    ---
-    parameters:
-      - name: body
-        in: body
-        description: Donation information
-        required: true
-        schema:
-          type: object
-          properties:
-            amount:
-              type: number
-              format: float
-              example: 50.0
-            user_id:
-              type: integer
-              example: 1
-            charity_id:
-              type: integer
-              example: 1
-            anonymous:
-              type: boolean
-              example: false
-    responses:
-      201:
-        description: Donation created successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  example: 1
-                amount:
-                  type: number
-                  format: float
-                  example: 50.0
-                user_id:
-                  type: integer
-                  example: 1
-                charity_id:
-                  type: integer
-                  example: 1
-                anonymous:
-                  type: boolean
-                  example: false
-    """
     data = request.get_json()
-    new_donation = Donation(
-        amount=data['amount'],
-        user_id=data['user_id'],
-        charity_id=data['charity_id'],
-        anonymous=data.get('anonymous', False)
-    )
-    db.session.add(new_donation)
+    charity_id = data.get('charity_id')
+    amount = data.get('amount')
+
+    if not charity_id or not amount:
+        return jsonify({'msg': 'Missing required fields'}), 400
+
+    # Create and save the donation without user_id
+    donation = Donation(charity_id=charity_id, amount=amount)
+    db.session.add(donation)
     db.session.commit()
-    return jsonify(new_donation.to_dict()), 201
+
+    return jsonify({'msg': 'Donation created successfully'}), 201
+
 
 @app.route('/donations/<int:donation_id>', methods=['GET'])
 def get_donation(donation_id):
@@ -561,6 +516,7 @@ def delete_donation(donation_id):
     return '', 204
 
 # Beneficiary Routes
+
 @app.route('/beneficiaries', methods=['GET'])
 def list_beneficiaries():
     """
@@ -585,6 +541,9 @@ def list_beneficiaries():
                   story:
                     type: string
                     example: A story about Jane Doe
+                  image_url:
+                    type: string
+                    example: https://example.com/image.jpg
                   charity_id:
                     type: integer
                     example: 1
@@ -611,6 +570,9 @@ def create_beneficiary():
             story:
               type: string
               example: A story about Jane Doe
+            image_url:
+              type: string
+              example: https://example.com/image.jpg
             charity_id:
               type: integer
               example: 1
@@ -631,6 +593,9 @@ def create_beneficiary():
                 story:
                   type: string
                   example: A story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -638,7 +603,8 @@ def create_beneficiary():
     data = request.get_json()
     new_beneficiary = Beneficiary(
         name=data['name'],
-        story=data['story'],
+        story=data.get('story', ''),
+        image_url=data.get('image_url', ''),
         charity_id=data['charity_id']
     )
     db.session.add(new_beneficiary)
@@ -674,6 +640,9 @@ def get_beneficiary(beneficiary_id):
                 story:
                   type: string
                   example: A story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -708,6 +677,9 @@ def update_beneficiary(beneficiary_id):
             story:
               type: string
               example: Updated story about Jane Doe
+            image_url:
+              type: string
+              example: https://example.com/updated-image.jpg
     responses:
       200:
         description: Beneficiary updated successfully
@@ -725,6 +697,9 @@ def update_beneficiary(beneficiary_id):
                 story:
                   type: string
                   example: Updated story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/updated-image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -737,6 +712,8 @@ def update_beneficiary(beneficiary_id):
         beneficiary.name = data['name']
     if 'story' in data:
         beneficiary.story = data['story']
+    if 'image_url' in data:
+        beneficiary.image_url = data['image_url']
     db.session.commit()
     return jsonify(beneficiary.to_dict()), 200
 
@@ -764,6 +741,7 @@ def delete_beneficiary(beneficiary_id):
     db.session.delete(beneficiary)
     db.session.commit()
     return '', 204
+
 
 # Application Routes
 @app.route('/applications', methods=['GET'])
