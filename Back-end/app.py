@@ -6,7 +6,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 import bcrypt
 import os
 from flasgger import Swagger
-from models import db, User, Charity, Donation, Beneficiary, Application
+from models import db, User, Charity, Donation, Beneficiary, Application, Admin
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
@@ -1016,6 +1016,79 @@ def delete_application(application_id):
     db.session.delete(application)
     db.session.commit()
     return '', 204
+
+# Admin login route
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    """
+    Admin login
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Admin login information
+        required: true
+        schema:
+          type: object
+          properties:
+            email:
+              type: string
+              example: admin@example.com
+            password:
+              type: string
+              example: adminpassword123
+    responses:
+      200:
+        description: Successful login with JWT token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                  example: <jwt_token>
+      401:
+        description: Invalid email or password
+    """
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    admin = Admin.query.filter_by(email=email).first()
+    if admin and  bcrypt.checkpw(data['password'].encode('utf-8'), admin.password.encode('utf-8')):
+        access_token = create_access_token(identity={'id': admin.id, 'username': admin.username})
+        return jsonify(access_token=access_token), 200
+    
+    return jsonify({"msg": "Invalid email or password"}), 401
+
+# Admin logout route
+@app.route('/admin/logout', methods=['POST'])
+@jwt_required()
+def admin_logout():
+    """
+    Logout an admin
+    ---
+    responses:
+      200:
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: Logout successful
+    """
+    jti = get_jwt()['jti']
+    BLACKLIST.add(jti)
+    return jsonify(msg="Logout successful"), 200
+
+# @jwt.token_in_blacklist_loader
+# def check_if_token_in_blacklist(decrypted_token):
+#     return decrypted_token['jti'] in BLACKLIST
+
 
 if __name__ == '__main__':
     app.run(debug=True)
