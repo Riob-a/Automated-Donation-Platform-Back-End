@@ -5,8 +5,8 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt, get_jwt_identity
 import bcrypt
 import os
-
-from models import db, User, Charity, Donation, Beneficiary
+from flasgger import Swagger
+from models import db, User, Charity, Donation, Beneficiary, Application
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
@@ -18,6 +18,7 @@ db.init_app(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 CORS(app)
+swagger = Swagger(app)  # Initialize Swagger
 
 BLACKLIST = set()
 
@@ -28,11 +29,66 @@ def check_if_token_in_blacklist(jwt_header, jwt_payload):
 
 @app.route('/')
 def home():
+    """
+    Home endpoint
+    ---
+    responses:
+      200:
+        description: Welcome message
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: Welcome to the Automated Donation Platform
+    """
     return jsonify({"message": "Welcome to the Automated Donation Platform"}), 200
 
 # User Routes
 @app.route('/users/register', methods=['POST'])
 def register_user():
+    """
+    Register a new user
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: User registration information
+        required: true
+        schema:
+          type: object
+          properties:
+            username:
+              type: string
+              example: john_doe
+            email:
+              type: string
+              example: john@example.com
+            password:
+              type: string
+              example: password123
+    responses:
+      201:
+        description: User created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                username:
+                  type: string
+                  example: john_doe
+                email:
+                  type: string
+                  example: john@example.com
+      400:
+        description: Bad request, email already in use
+    """
     data = request.get_json()
     if User.query.filter_by(email=data['email']).first():
         return jsonify({'msg': 'Email already in use'}), 400
@@ -50,6 +106,37 @@ def register_user():
 
 @app.route('/users/login', methods=['POST'])
 def login_user():
+    """
+    Login a user
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: User login information
+        required: true
+        schema:
+          type: object
+          properties:
+            email:
+              type: string
+              example: john@example.com
+            password:
+              type: string
+              example: password123
+    responses:
+      200:
+        description: Successful login with JWT token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                  example: <jwt_token>
+      401:
+        description: Invalid email or password
+    """
     data = request.get_json()
     user = User.query.filter_by(email=data['email']).first()
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
@@ -60,12 +147,49 @@ def login_user():
 @app.route('/users/protected', methods=['GET'])
 @jwt_required()
 def protected_user():
+    """
+    Access protected user data
+    ---
+    responses:
+      200:
+        description: Successfully retrieved user data
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logged_in_as:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    username:
+                      type: string
+                      example: john_doe
+    """
     current_user = get_jwt_identity()
     return jsonify(logged_in_as=current_user), 200
 
+# Logout Route
 @app.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
+    """
+    Logout a user
+    ---
+    responses:
+      200:
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: Logout successful
+    """
     jti = get_jwt()['jti']
     BLACKLIST.add(jti)
     return jsonify(msg="Logout successful"), 200
@@ -73,16 +197,93 @@ def logout():
 # Charity Routes
 @app.route('/charities', methods=['GET'])
 def list_charities():
+    """
+    List all approved charities
+    ---
+    responses:
+      200:
+        description: List of approved charities
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: Charity A
+                  description:
+                    type: string
+                    example: A description of Charity A
+                  website:
+                    type: string
+                    example: http://charitya.org
+                  image_url:
+                    type: string
+                    example: http://charitya.org/image.jpg
+    """
     charities = Charity.query.filter_by(approved=True).all()
     return jsonify([charity.to_dict() for charity in charities]), 200
 
 @app.route('/charities', methods=['POST'])
 def create_charity():
+    """
+    Create a new charity
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Charity information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Charity B
+            description:
+              type: string
+              example: A description of Charity B
+            website:
+              type: string
+              example: http://charityb.org
+            image_url:
+              type: string
+              example: http://charityb.org/image.jpg
+    responses:
+      201:
+        description: Charity created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 2
+                name:
+                  type: string
+                  example: Charity B
+                description:
+                  type: string
+                  example: A description of Charity B
+                website:
+                  type: string
+                  example: http://charityb.org
+                image_url:
+                  type: string
+                  example: http://charityb.org/image.jpg
+    """
     data = request.get_json()
     new_charity = Charity(
         name=data['name'],
         description=data['description'],
-        website=data.get('website')
+        website=data.get('website'),
+        image_url=data.get('image_url')
     )
     db.session.add(new_charity)
     db.session.commit()
@@ -90,11 +291,105 @@ def create_charity():
 
 @app.route('/charities/<int:charity_id>', methods=['GET'])
 def get_charity(charity_id):
+    """
+    Get details of a specific charity
+    ---
+    parameters:
+      - name: charity_id
+        in: path
+        description: ID of the charity to retrieve
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Details of the charity
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Charity A
+                description:
+                  type: string
+                  example: A description of Charity A
+                website:
+                  type: string
+                  example: http://charitya.org
+                image_url:
+                  type: string
+                  example: http://charitya.org/image.jpg
+      404:
+        description: Charity not found
+    """
     charity = Charity.query.get_or_404(charity_id)
     return jsonify(charity.to_dict()), 200
 
 @app.route('/charities/<int:charity_id>', methods=['PATCH'])
 def update_charity(charity_id):
+    """
+    Update a charity
+    ---
+    parameters:
+      - name: charity_id
+        in: path
+        description: ID of the charity to update
+        required: true
+        schema:
+          type: integer
+      - name: body
+        in: body
+        description: Updated charity information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Charity A Updated
+            description:
+              type: string
+              example: Updated description of Charity A
+            website:
+              type: string
+              example: http://charitya-updated.org
+            approved:
+              type: boolean
+              example: true
+            image_url:
+              type: string
+              example: http://charitya-updated.org/image.jpg
+    responses:
+      200:
+        description: Charity updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Charity A Updated
+                description:
+                  type: string
+                  example: Updated description of Charity A
+                website:
+                  type: string
+                  example: http://charitya-updated.org
+                image_url:
+                  type: string
+                  example: http://charitya-updated.org/image.jpg
+      404:
+        description: Charity not found
+    """
     charity = Charity.query.get_or_404(charity_id)
     data = request.get_json()
     if 'name' in data:
@@ -105,12 +400,32 @@ def update_charity(charity_id):
         charity.website = data['website']
     if 'approved' in data:
         charity.approved = data['approved']
+    if 'image_url' in data:
+        charity.image_url = data['image_url']
     db.session.commit()
     return jsonify(charity.to_dict()), 200
 
 @app.route('/charities/<int:charity_id>', methods=['DELETE'])
 def delete_charity(charity_id):
-    charity = Charity.query.get_or_404(charity_id)
+    """
+    Delete a charity
+    ---
+    parameters:
+      - name: charity_id
+        in: path
+        description: ID of the charity to delete
+        required: true
+        schema:
+          type: integer
+    responses:
+      204:
+        description: Charity deleted successfully
+      404:
+        description: Charity not found
+    """
+    charity = Charity.query.get(charity_id)
+    if not charity:
+        return jsonify({'msg': 'Charity not found'}), 404
     db.session.delete(charity)
     db.session.commit()
     return '', 204
@@ -118,12 +433,61 @@ def delete_charity(charity_id):
 # Donation Routes
 @app.route('/donations', methods=['POST'])
 def create_donation():
+    """
+    Create a new donation
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Donation information
+        required: true
+        schema:
+          type: object
+          properties:
+            amount:
+              type: number
+              format: float
+              example: 50.0
+            user_id:
+              type: integer
+              example: 1
+            charity_id:
+              type: integer
+              example: 1
+            anonymous:
+              type: boolean
+              example: false
+    responses:
+      201:
+        description: Donation created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                amount:
+                  type: number
+                  format: float
+                  example: 50.0
+                user_id:
+                  type: integer
+                  example: 1
+                charity_id:
+                  type: integer
+                  example: 1
+                anonymous:
+                  type: boolean
+                  example: false
+    """
     data = request.get_json()
     new_donation = Donation(
         amount=data['amount'],
-        anonymous=data.get('anonymous', False),
         user_id=data['user_id'],
-        charity_id=data['charity_id']
+        charity_id=data['charity_id'],
+        anonymous=data.get('anonymous', False)
     )
     db.session.add(new_donation)
     db.session.commit()
@@ -131,23 +495,150 @@ def create_donation():
 
 @app.route('/donations/<int:donation_id>', methods=['GET'])
 def get_donation(donation_id):
+    """
+    Get details of a specific donation
+    ---
+    parameters:
+      - name: donation_id
+        in: path
+        description: ID of the donation to retrieve
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Details of the donation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                amount:
+                  type: number
+                  format: float
+                  example: 50.0
+                user_id:
+                  type: integer
+                  example: 1
+                charity_id:
+                  type: integer
+                  example: 1
+                anonymous:
+                  type: boolean
+                  example: false
+      404:
+        description: Donation not found
+    """
     donation = Donation.query.get_or_404(donation_id)
     return jsonify(donation.to_dict()), 200
 
 @app.route('/donations/<int:donation_id>', methods=['DELETE'])
 def delete_donation(donation_id):
-    donation = Donation.query.get_or_404(donation_id)
+    """
+    Delete a donation
+    ---
+    parameters:
+      - name: donation_id
+        in: path
+        description: ID of the donation to delete
+        required: true
+        schema:
+          type: integer
+    responses:
+      204:
+        description: Donation deleted successfully
+      404:
+        description: Donation not found
+    """
+    donation = Donation.query.get(donation_id)
+    if not donation:
+        return jsonify({'msg': 'Donation not found'}), 404
     db.session.delete(donation)
     db.session.commit()
     return '', 204
 
 # Beneficiary Routes
+@app.route('/beneficiaries', methods=['GET'])
+def list_beneficiaries():
+    """
+    List all beneficiaries
+    ---
+    responses:
+      200:
+        description: List of all beneficiaries
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: Jane Doe
+                  story:
+                    type: string
+                    example: A story about Jane Doe
+                  charity_id:
+                    type: integer
+                    example: 1
+    """
+    beneficiaries = Beneficiary.query.all()
+    return jsonify([beneficiary.to_dict() for beneficiary in beneficiaries]), 200
+
 @app.route('/beneficiaries', methods=['POST'])
 def create_beneficiary():
+    """
+    Create a new beneficiary
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Beneficiary information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Jane Doe
+            story:
+              type: string
+              example: A story about Jane Doe
+            charity_id:
+              type: integer
+              example: 1
+    responses:
+      201:
+        description: Beneficiary created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Jane Doe
+                story:
+                  type: string
+                  example: A story about Jane Doe
+                charity_id:
+                  type: integer
+                  example: 1
+    """
     data = request.get_json()
     new_beneficiary = Beneficiary(
         name=data['name'],
-        story=data.get('story'),
+        story=data['story'],
         charity_id=data['charity_id']
     )
     db.session.add(new_beneficiary)
@@ -156,11 +647,90 @@ def create_beneficiary():
 
 @app.route('/beneficiaries/<int:beneficiary_id>', methods=['GET'])
 def get_beneficiary(beneficiary_id):
+    """
+    Get details of a specific beneficiary
+    ---
+    parameters:
+      - name: beneficiary_id
+        in: path
+        description: ID of the beneficiary to retrieve
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Details of the beneficiary
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Jane Doe
+                story:
+                  type: string
+                  example: A story about Jane Doe
+                charity_id:
+                  type: integer
+                  example: 1
+      404:
+        description: Beneficiary not found
+    """
     beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
     return jsonify(beneficiary.to_dict()), 200
 
 @app.route('/beneficiaries/<int:beneficiary_id>', methods=['PATCH'])
 def update_beneficiary(beneficiary_id):
+    """
+    Update a beneficiary
+    ---
+    parameters:
+      - name: beneficiary_id
+        in: path
+        description: ID of the beneficiary to update
+        required: true
+        schema:
+          type: integer
+      - name: body
+        in: body
+        description: Updated beneficiary information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Jane Doe Updated
+            story:
+              type: string
+              example: Updated story about Jane Doe
+    responses:
+      200:
+        description: Beneficiary updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Jane Doe Updated
+                story:
+                  type: string
+                  example: Updated story about Jane Doe
+                charity_id:
+                  type: integer
+                  example: 1
+      404:
+        description: Beneficiary not found
+    """
     beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
     data = request.get_json()
     if 'name' in data:
@@ -172,8 +742,278 @@ def update_beneficiary(beneficiary_id):
 
 @app.route('/beneficiaries/<int:beneficiary_id>', methods=['DELETE'])
 def delete_beneficiary(beneficiary_id):
-    beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
+    """
+    Delete a beneficiary
+    ---
+    parameters:
+      - name: beneficiary_id
+        in: path
+        description: ID of the beneficiary to delete
+        required: true
+        schema:
+          type: integer
+    responses:
+      204:
+        description: Beneficiary deleted successfully
+      404:
+        description: Beneficiary not found
+    """
+    beneficiary = Beneficiary.query.get(beneficiary_id)
+    if not beneficiary:
+        return jsonify({'msg': 'Beneficiary not found'}), 404
     db.session.delete(beneficiary)
+    db.session.commit()
+    return '', 204
+
+# Application Routes
+@app.route('/applications', methods=['GET'])
+def list_applications():
+    """
+    List all applications
+    ---
+    responses:
+      200:
+        description: A list of all applications
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: Application A
+                  description:
+                    type: string
+                    example: Description of Application A
+                  website:
+                    type: string
+                    example: http://applicationa.org
+                  image_url:
+                    type: string
+                    example: http://applicationa.org/image.jpg
+                  status:
+                    type: string
+                    example: Pending
+    """
+    applications = Application.query.all()
+    return jsonify([application.to_dict() for application in applications]), 200
+
+@app.route('/applications/<int:application_id>', methods=['GET'])
+def get_application(application_id):
+    """
+    Get details of a specific application
+    ---
+    parameters:
+      - name: application_id
+        in: path
+        description: ID of the application to retrieve
+        required: true
+        schema:
+          type: integer
+    responses:
+      200:
+        description: Details of the application
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Application A
+                description:
+                  type: string
+                  example: Description of Application A
+                website:
+                  type: string
+                  example: http://applicationa.org
+                image_url:
+                  type: string
+                  example: http://applicationa.org/image.jpg
+                status:
+                  type: string
+                  example: Pending
+      404:
+        description: Application not found
+    """
+    application = Application.query.get_or_404(application_id)
+    return jsonify(application.to_dict()), 200
+
+@app.route('/applications', methods=['POST'])
+def create_application():
+    """
+    Create a new application
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Application information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Application B
+            description:
+              type: string
+              example: Description of Application B
+            website:
+              type: string
+              example: http://applicationb.org
+            image_url:
+              type: string
+              example: http://applicationb.org/image.jpg
+            status:
+              type: string
+              example: Pending
+    responses:
+      201:
+        description: Application created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Application B
+                description:
+                  type: string
+                  example: Description of Application B
+                website:
+                  type: string
+                  example: http://applicationb.org
+                image_url:
+                  type: string
+                  example: http://applicationb.org/image.jpg
+                status:
+                  type: string
+                  example: Pending
+    """
+    data = request.get_json()
+    new_application = Application(
+        name=data['name'],
+        description=data['description'],
+        website=data.get('website'),
+        image_url=data.get('image_url'),
+        status='Pending'
+    )
+    db.session.add(new_application)
+    db.session.commit()
+    return jsonify(new_application.to_dict()), 201
+
+@app.route('/applications/<int:application_id>', methods=['PATCH'])
+def update_application(application_id):
+    """
+    Update an application
+    ---
+    parameters:
+      - name: application_id
+        in: path
+        description: ID of the application to update
+        required: true
+        schema:
+          type: integer
+      - name: body
+        in: body
+        description: Updated application information
+        required: true
+        schema:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Application B Updated
+            description:
+              type: string
+              example: Updated description of Application B
+            website:
+              type: string
+              example: http://applicationb-updated.org
+            status:
+              type: string
+              example: Approved
+            image_url:
+              type: string
+              example: http://applicationb-updated.org/image.jpg
+    responses:
+      200:
+        description: Application updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: Application B Updated
+                description:
+                  type: string
+                  example: Updated description of Application B
+                website:
+                  type: string
+                  example: http://applicationb-updated.org
+                image_url:
+                  type: string
+                  example: http://applicationb-updated.org/image.jpg
+                status:
+                  type: string
+                  example: Approved
+      404:
+        description: Application not found
+    """
+    application = Application.query.get_or_404(application_id)
+    data = request.get_json()
+    if 'name' in data:
+        application.name = data['name']
+    if 'description' in data:
+        application.description = data['description']
+    if 'website' in data:
+        application.website = data['website']
+    if 'status' in data:
+        application.status = data['status']
+    if 'image_url' in data:
+        application.image_url = data['image_url']
+    db.session.commit()
+    return jsonify(application.to_dict()), 200
+
+@app.route('/applications/<int:application_id>', methods=['DELETE'])
+def delete_application(application_id):
+    """
+    Delete an application
+    ---
+    parameters:
+      - name: application_id
+        in: path
+        description: ID of the application to delete
+        required: true
+        schema:
+          type: integer
+    responses:
+      204:
+        description: Application deleted successfully
+      404:
+        description: Application not found
+    """
+    application = Application.query.get(application_id)
+    if not application:
+        return jsonify({'msg': 'Application not found'}), 404
+    db.session.delete(application)
     db.session.commit()
     return '', 204
 
