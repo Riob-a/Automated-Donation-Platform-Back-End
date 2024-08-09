@@ -46,6 +46,28 @@ class Charity(db.Model):
             'approved': self.approved,
             'image_url': self.image_url
         }
+    
+class UnapprovedCharity(db.Model):
+    __tablename__ = 'unapproved_charities'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    website = db.Column(db.String(200))
+    image_url = db.Column(db.String(500))  # Field for image URL
+    date_submitted = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<UnapprovedCharity {self.name}>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'website': self.website,
+            'image_url': self.image_url,
+            'date_submitted': self.date_submitted
+        }
 
 class Donation(db.Model):
     __tablename__ = 'donations'
