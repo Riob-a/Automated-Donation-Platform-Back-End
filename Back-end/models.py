@@ -29,8 +29,7 @@ class Charity(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
     website = db.Column(db.String(200))
-    approved = db.Column(db.Boolean, default=False)
-    image_url = db.Column(db.String(500))  # New field for image URL
+    image_url = db.Column(db.String(500))  # Field for image URL
     donations = db.relationship('Donation', backref='charity', lazy=True, passive_deletes=True)
     beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True, passive_deletes=True)
 
@@ -43,7 +42,6 @@ class Charity(db.Model):
             'name': self.name,
             'description': self.description,
             'website': self.website,
-            'approved': self.approved,
             'image_url': self.image_url
         }
     

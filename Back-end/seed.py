@@ -85,7 +85,6 @@ def seed_db():
                 name=charity_data['name'],
                 description=charity_data['description'],
                 website=charity_data['website'],
-                approved=charity_data['approved'],
                 image_url=charity_data['image_url']
             )
             db.session.add(charity)

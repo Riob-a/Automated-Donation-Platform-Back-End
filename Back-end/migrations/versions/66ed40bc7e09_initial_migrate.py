@@ -1,8 +1,8 @@
-"""initial migration
+"""Initial migrate
 
-Revision ID: 97b6e84b9375
+Revision ID: 66ed40bc7e09
 Revises: 
-Create Date: 2024-08-08 16:43:17.643752
+Create Date: 2024-08-09 09:51:45.343402
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '97b6e84b9375'
+revision = '66ed40bc7e09'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -42,7 +42,6 @@ def upgrade():
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('website', sa.String(length=200), nullable=True),
-    sa.Column('approved', sa.Boolean(), nullable=True),
     sa.Column('image_url', sa.String(length=500), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
@@ -52,6 +51,16 @@ def upgrade():
     sa.Column('token', sa.String(length=500), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('token')
+    )
+    op.create_table('unapproved_charities',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.Text(), nullable=False),
+    sa.Column('website', sa.String(length=200), nullable=True),
+    sa.Column('image_url', sa.String(length=500), nullable=True),
+    sa.Column('date_submitted', sa.DateTime(), nullable=True),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name')
     )
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -91,6 +100,7 @@ def downgrade():
     op.drop_table('donations')
     op.drop_table('beneficiaries')
     op.drop_table('users')
+    op.drop_table('unapproved_charities')
     op.drop_table('token_blacklist')
     op.drop_table('charities')
     op.drop_table('applications')

@@ -6,7 +6,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 import bcrypt
 import os
 from flasgger import Swagger
-from models import db, User, Charity, Donation, Beneficiary, Application, Admin
+from models import db, User, Charity, Donation, Beneficiary, Application, Admin, UnapprovedCharity
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
@@ -226,7 +226,7 @@ def list_charities():
                     type: string
                     example: http://charitya.org/image.jpg
     """
-    charities = Charity.query.filter_by(approved=True).all()
+    charities = Charity.query.all()  # Fetch all charities
     return jsonify([charity.to_dict() for charity in charities]), 200
 
 @app.route('/charities', methods=['POST'])
@@ -358,9 +358,6 @@ def update_charity(charity_id):
             website:
               type: string
               example: http://charitya-updated.org
-            approved:
-              type: boolean
-              example: true
             image_url:
               type: string
               example: http://charitya-updated.org/image.jpg
@@ -398,8 +395,6 @@ def update_charity(charity_id):
         charity.description = data['description']
     if 'website' in data:
         charity.website = data['website']
-    if 'approved' in data:
-        charity.approved = data['approved']
     if 'image_url' in data:
         charity.image_url = data['image_url']
     db.session.commit()
@@ -429,6 +424,71 @@ def delete_charity(charity_id):
     db.session.delete(charity)
     db.session.commit()
     return '', 204
+
+#Unapproved charities
+@app.route('/unapproved-charities', methods=['GET'])
+def get_unapproved_charities():
+    try:
+        unapproved_charities = UnapprovedCharity.query.all()
+        result = [charity.to_dict() for charity in unapproved_charities]
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/unapproved-charities', methods=['POST'])
+def create_unapproved_charity():
+    try:
+        data = request.get_json()
+        if not data or not all(key in data for key in ('name', 'description')):
+            return jsonify({'error': 'Invalid input data'}), 400
+
+        new_charity = UnapprovedCharity(
+            name=data.get('name'),
+            description=data.get('description'),
+            website=data.get('website'),
+            image_url=data.get('image_url')
+        )
+        db.session.add(new_charity)
+        db.session.commit()
+
+        return jsonify(new_charity.to_dict()), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def move_unapproved_charities():
+    try:
+        # Retrieve all unapproved charities
+        unapproved_charities = UnapprovedCharity.query.all()
+        
+        # Iterate through each unapproved charity
+        for unapproved in unapproved_charities:
+            # Create a new Charity instance
+            new_charity = Charity(
+                name=unapproved.name,
+                description=unapproved.description,
+                website=unapproved.website,
+                image_url=unapproved.image_url
+            )
+            
+            # Add the new charity to the database session
+            db.session.add(new_charity)
+            
+            # Delete the unapproved charity from the UnapprovedCharity model
+            db.session.delete(unapproved)
+        
+        # Commit the changes to the database
+        db.session.commit()
+        
+        return jsonify({"message": "Unapproved charities moved to Charity model successfully"}), 200
+    
+    except Exception as e:
+        # Handle any exceptions and rollback changes if necessary
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/move-unapproved-charities', methods=['POST'])
+def move_charities():
+    return move_unapproved_charities()
 
 # Donation Routes
 @app.route('/donations', methods=['POST'])
