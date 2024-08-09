@@ -425,9 +425,40 @@ def delete_charity(charity_id):
     db.session.commit()
     return '', 204
 
-#Unapproved charities
+# Unapproved charities
 @app.route('/unapproved-charities', methods=['GET'])
 def get_unapproved_charities():
+    """
+    Get a list of unapproved charities
+    ---
+    responses:
+      200:
+        description: A list of unapproved charities
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: "Charity Name"
+                  description:
+                    type: string
+                    example: "Charity Description"
+                  website:
+                    type: string
+                    example: "https://www.charitywebsite.org"
+                  image_url:
+                    type: string
+                    example: "https://www.example.com/image.jpg"
+      500:
+        description: Server error
+    """
     try:
         unapproved_charities = UnapprovedCharity.query.all()
         result = [charity.to_dict() for charity in unapproved_charities]
@@ -437,6 +468,56 @@ def get_unapproved_charities():
 
 @app.route('/unapproved-charities', methods=['POST'])
 def create_unapproved_charity():
+    """
+    Create a new unapproved charity
+    ---
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Charity Name"
+              description:
+                type: string
+                example: "Charity Description"
+              website:
+                type: string
+                example: "https://www.charitywebsite.org"
+              image_url:
+                type: string
+                example: "https://www.example.com/image.jpg"
+    responses:
+      201:
+        description: Unapproved charity created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: "Charity Name"
+                description:
+                  type: string
+                  example: "Charity Description"
+                website:
+                  type: string
+                  example: "https://www.charitywebsite.org"
+                image_url:
+                  type: string
+                  example: "https://www.example.com/image.jpg"
+      400:
+        description: Invalid input data
+      500:
+        description: Server error
+    """
     try:
         data = request.get_json()
         if not data or not all(key in data for key in ('name', 'description')):
@@ -486,8 +567,26 @@ def move_unapproved_charities():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
     
+#Moves data from Unapproaved model to Charities model    
 @app.route('/move-unapproved-charities', methods=['POST'])
 def move_charities():
+    """
+    Move unapproved charities to the approved charities list
+    ---
+    responses:
+      200:
+        description: Unapproved charities moved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Unapproved charities moved to Charity model successfully"
+      500:
+        description: Server error
+    """
     return move_unapproved_charities()
 
 # Donation Routes
