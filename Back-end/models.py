@@ -37,12 +37,14 @@ class Charity(db.Model):
         return f"<Charity {self.name}>"
 
     def to_dict(self):
+        total_donations = sum(donation.amount for donation in self.donations)
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'website': self.website,
-            'image_url': self.image_url
+            'image_url': self.image_url,
+            'total_donations': total_donations
         }
     
 class UnapprovedCharity(db.Model):
