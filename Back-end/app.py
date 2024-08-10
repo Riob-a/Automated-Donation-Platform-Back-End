@@ -560,7 +560,7 @@ def move_unapproved_charities():
         # Commit the changes to the database
         db.session.commit()
         
-        return jsonify({"message": "Unapproved charities moved to Charity model successfully"}), 200
+        return jsonify({"message": "Charities have been approved successfully"}), 200
     
     except Exception as e:
         # Handle any exceptions and rollback changes if necessary
@@ -583,7 +583,7 @@ def move_charities():
               properties:
                 message:
                   type: string
-                  example: "Unapproved charities moved to Charity model successfully"
+                  example: "Charities have been approved successfully"
       500:
         description: Server error
     """
