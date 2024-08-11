@@ -1,12 +1,12 @@
 from app import app, db
-from models import User, Charity, Donation, Beneficiary
+from models import User, Charity, Donation, Beneficiary, Application
 import bcrypt
 
 # Sample data
 users = [
-    {'username': 'john_doe', 'email': 'john@example.com', 'password': 'password123'},
-    {'username': 'jane_smith', 'email': 'jane@example.com', 'password': 'securepassword'},
-    {'username': 'derrick_rioba', 'email':'d@example.com', 'password': 'test1'}
+    {'username': 'john_doe', 'email': 'john@example.com', 'password': 'password123', 'is_admin': False},
+    {'username': 'jane_smith', 'email': 'jane@example.com', 'password': 'securepassword', 'is_admin': False},
+    {'username': 'derrick_rioba', 'email': 'd@example.com', 'password': 'test1', 'is_admin': True}
 ]
 
 charities = [
@@ -32,8 +32,35 @@ donations = [
 ]
 
 beneficiaries = [
-    {'name': 'Mary', 'story': 'A bright student with a passion for learning but lacks access to basic sanitary supplies.', 'charity_id': 1},
-    {'name': 'Sophia', 'story': 'An aspiring engineer with dreams of a better future, supported by educational initiatives.', 'charity_id': 2}
+    {
+        'name': 'Mary',
+        'story': 'A bright student with a passion for learning but lacks access to basic sanitary supplies.',
+        'image_url': 'http://example.com/images/mary.jpg',
+        'charity_id': 1
+    },
+    {
+        'name': 'Sophia',
+        'story': 'An aspiring engineer with dreams of a better future, supported by educational initiatives.',
+        'image_url': 'http://example.com/images/sophia.jpg',
+        'charity_id': 2
+    }
+]
+
+applications = [
+    {
+        'name': 'Health & Hygiene',
+        'description': 'A program focused on promoting health and hygiene among school-aged girls.',
+        'website': 'http://healthandhygiene.org',
+        'image_url': 'http://example.com/images/healthandhygiene.jpg',
+        'status': 'Pending'
+    },
+    {
+        'name': 'Tech for Girls',
+        'description': 'Providing technology resources and education to girls in rural areas.',
+        'website': 'http://techforgirls.org',
+        'image_url': 'http://example.com/images/techforgirls.jpg',
+        'status': 'Pending'
+    }
 ]
 
 def seed_db():
@@ -44,7 +71,12 @@ def seed_db():
         # Seed users with hashed passwords
         for user_data in users:
             hashed_password = bcrypt.hashpw(user_data['password'].encode('utf-8'), bcrypt.gensalt())
-            user = User(username=user_data['username'], email=user_data['email'], password=hashed_password.decode('utf-8'))
+            user = User(
+                username=user_data['username'],
+                email=user_data['email'],
+                password=hashed_password.decode('utf-8'),
+                is_admin=user_data['is_admin']
+            )
             db.session.add(user)
 
         # Seed charities
@@ -53,7 +85,6 @@ def seed_db():
                 name=charity_data['name'],
                 description=charity_data['description'],
                 website=charity_data['website'],
-                approved=charity_data['approved'],
                 image_url=charity_data['image_url']
             )
             db.session.add(charity)
@@ -73,9 +104,21 @@ def seed_db():
             beneficiary = Beneficiary(
                 name=beneficiary_data['name'],
                 story=beneficiary_data['story'],
+                image_url=beneficiary_data['image_url'],
                 charity_id=beneficiary_data['charity_id']
             )
             db.session.add(beneficiary)
+
+        # Seed applications
+        for application_data in applications:
+            application = Application(
+                name=application_data['name'],
+                description=application_data['description'],
+                website=application_data['website'],
+                image_url=application_data['image_url'],
+                status=application_data['status']
+            )
+            db.session.add(application)
 
         # Commit the session
         db.session.commit()
