@@ -32,8 +32,18 @@ donations = [
 ]
 
 beneficiaries = [
-    {'name': 'Mary', 'story': 'A bright student with a passion for learning but lacks access to basic sanitary supplies.', 'charity_id': 1},
-    {'name': 'Sophia', 'story': 'An aspiring engineer with dreams of a better future, supported by educational initiatives.', 'charity_id': 2}
+    {
+        'name': 'Mary',
+        'story': 'A bright student with a passion for learning but lacks access to basic sanitary supplies.',
+        'image_url': 'http://example.com/images/mary.jpg',
+        'charity_id': 1
+    },
+    {
+        'name': 'Sophia',
+        'story': 'An aspiring engineer with dreams of a better future, supported by educational initiatives.',
+        'image_url': 'http://example.com/images/sophia.jpg',
+        'charity_id': 2
+    }
 ]
 
 applications = [
@@ -75,7 +85,6 @@ def seed_db():
                 name=charity_data['name'],
                 description=charity_data['description'],
                 website=charity_data['website'],
-                approved=charity_data['approved'],
                 image_url=charity_data['image_url']
             )
             db.session.add(charity)
@@ -95,6 +104,7 @@ def seed_db():
             beneficiary = Beneficiary(
                 name=beneficiary_data['name'],
                 story=beneficiary_data['story'],
+                image_url=beneficiary_data['image_url'],
                 charity_id=beneficiary_data['charity_id']
             )
             db.session.add(beneficiary)

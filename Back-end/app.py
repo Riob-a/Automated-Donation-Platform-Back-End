@@ -6,7 +6,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 import bcrypt
 import os
 from flasgger import Swagger
-from models import db, User, Charity, Donation, Beneficiary, Application
+from models import db, User, Charity, Donation, Beneficiary, Application, Admin, UnapprovedCharity
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
@@ -226,7 +226,7 @@ def list_charities():
                     type: string
                     example: http://charitya.org/image.jpg
     """
-    charities = Charity.query.filter_by(approved=True).all()
+    charities = Charity.query.all()  # Fetch all charities
     return jsonify([charity.to_dict() for charity in charities]), 200
 
 @app.route('/charities', methods=['POST'])
@@ -358,9 +358,6 @@ def update_charity(charity_id):
             website:
               type: string
               example: http://charitya-updated.org
-            approved:
-              type: boolean
-              example: true
             image_url:
               type: string
               example: http://charitya-updated.org/image.jpg
@@ -398,8 +395,6 @@ def update_charity(charity_id):
         charity.description = data['description']
     if 'website' in data:
         charity.website = data['website']
-    if 'approved' in data:
-        charity.approved = data['approved']
     if 'image_url' in data:
         charity.image_url = data['image_url']
     db.session.commit()
@@ -430,36 +425,74 @@ def delete_charity(charity_id):
     db.session.commit()
     return '', 204
 
-# Donation Routes
-@app.route('/donations', methods=['POST'])
-def create_donation():
+# Unapproved charities
+@app.route('/unapproved-charities', methods=['GET'])
+def get_unapproved_charities():
     """
-    Create a new donation
+    Get a list of unapproved charities
     ---
-    parameters:
-      - name: body
-        in: body
-        description: Donation information
-        required: true
-        schema:
-          type: object
-          properties:
-            amount:
-              type: number
-              format: float
-              example: 50.0
-            user_id:
-              type: integer
-              example: 1
-            charity_id:
-              type: integer
-              example: 1
-            anonymous:
-              type: boolean
-              example: false
+    responses:
+      200:
+        description: A list of unapproved charities
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: "Charity Name"
+                  description:
+                    type: string
+                    example: "Charity Description"
+                  website:
+                    type: string
+                    example: "https://www.charitywebsite.org"
+                  image_url:
+                    type: string
+                    example: "https://www.example.com/image.jpg"
+      500:
+        description: Server error
+    """
+    try:
+        unapproved_charities = UnapprovedCharity.query.all()
+        result = [charity.to_dict() for charity in unapproved_charities]
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/unapproved-charities', methods=['POST'])
+def create_unapproved_charity():
+    """
+    Create a new unapproved charity
+    ---
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "Charity Name"
+              description:
+                type: string
+                example: "Charity Description"
+              website:
+                type: string
+                example: "https://www.charitywebsite.org"
+              image_url:
+                type: string
+                example: "https://www.example.com/image.jpg"
     responses:
       201:
-        description: Donation created successfully
+        description: Unapproved charity created successfully
         content:
           application/json:
             schema:
@@ -468,30 +501,111 @@ def create_donation():
                 id:
                   type: integer
                   example: 1
-                amount:
-                  type: number
-                  format: float
-                  example: 50.0
-                user_id:
-                  type: integer
-                  example: 1
-                charity_id:
-                  type: integer
-                  example: 1
-                anonymous:
-                  type: boolean
-                  example: false
+                name:
+                  type: string
+                  example: "Charity Name"
+                description:
+                  type: string
+                  example: "Charity Description"
+                website:
+                  type: string
+                  example: "https://www.charitywebsite.org"
+                image_url:
+                  type: string
+                  example: "https://www.example.com/image.jpg"
+      400:
+        description: Invalid input data
+      500:
+        description: Server error
     """
+    try:
+        data = request.get_json()
+        if not data or not all(key in data for key in ('name', 'description')):
+            return jsonify({'error': 'Invalid input data'}), 400
+
+        new_charity = UnapprovedCharity(
+            name=data.get('name'),
+            description=data.get('description'),
+            website=data.get('website'),
+            image_url=data.get('image_url')
+        )
+        db.session.add(new_charity)
+        db.session.commit()
+
+        return jsonify(new_charity.to_dict()), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
+def move_unapproved_charities():
+    try:
+        # Retrieve all unapproved charities
+        unapproved_charities = UnapprovedCharity.query.all()
+        
+        # Iterate through each unapproved charity
+        for unapproved in unapproved_charities:
+            # Create a new Charity instance
+            new_charity = Charity(
+                name=unapproved.name,
+                description=unapproved.description,
+                website=unapproved.website,
+                image_url=unapproved.image_url
+            )
+            
+            # Add the new charity to the database session
+            db.session.add(new_charity)
+            
+            # Delete the unapproved charity from the UnapprovedCharity model
+            db.session.delete(unapproved)
+        
+        # Commit the changes to the database
+        db.session.commit()
+        
+        return jsonify({"message": "Charities have been approved successfully"}), 200
+    
+    except Exception as e:
+        # Handle any exceptions and rollback changes if necessary
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+#Moves data from Unapproaved model to Charities model    
+@app.route('/move-unapproved-charities', methods=['POST'])
+def move_charities():
+    """
+    Move unapproved charities to the approved charities list
+    ---
+    responses:
+      200:
+        description: Unapproved charities moved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Charities have been approved successfully"
+      500:
+        description: Server error
+    """
+    return move_unapproved_charities()
+
+# Donation Routes
+@app.route('/donations', methods=['POST'])
+def create_donation():
     data = request.get_json()
-    new_donation = Donation(
-        amount=data['amount'],
-        user_id=data['user_id'],
-        charity_id=data['charity_id'],
-        anonymous=data.get('anonymous', False)
-    )
-    db.session.add(new_donation)
+    charity_id = data.get('charity_id')
+    amount = data.get('amount')
+
+    if not charity_id or not amount:
+        return jsonify({'msg': 'Missing required fields'}), 400
+
+    # Create and save the donation without user_id
+    donation = Donation(charity_id=charity_id, amount=amount)
+    db.session.add(donation)
     db.session.commit()
-    return jsonify(new_donation.to_dict()), 201
+
+    return jsonify({'msg': 'Donation created successfully'}), 201
+
 
 @app.route('/donations/<int:donation_id>', methods=['GET'])
 def get_donation(donation_id):
@@ -561,6 +675,7 @@ def delete_donation(donation_id):
     return '', 204
 
 # Beneficiary Routes
+
 @app.route('/beneficiaries', methods=['GET'])
 def list_beneficiaries():
     """
@@ -585,6 +700,9 @@ def list_beneficiaries():
                   story:
                     type: string
                     example: A story about Jane Doe
+                  image_url:
+                    type: string
+                    example: https://example.com/image.jpg
                   charity_id:
                     type: integer
                     example: 1
@@ -611,6 +729,9 @@ def create_beneficiary():
             story:
               type: string
               example: A story about Jane Doe
+            image_url:
+              type: string
+              example: https://example.com/image.jpg
             charity_id:
               type: integer
               example: 1
@@ -631,6 +752,9 @@ def create_beneficiary():
                 story:
                   type: string
                   example: A story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -638,7 +762,8 @@ def create_beneficiary():
     data = request.get_json()
     new_beneficiary = Beneficiary(
         name=data['name'],
-        story=data['story'],
+        story=data.get('story', ''),
+        image_url=data.get('image_url', ''),
         charity_id=data['charity_id']
     )
     db.session.add(new_beneficiary)
@@ -674,6 +799,9 @@ def get_beneficiary(beneficiary_id):
                 story:
                   type: string
                   example: A story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -708,6 +836,9 @@ def update_beneficiary(beneficiary_id):
             story:
               type: string
               example: Updated story about Jane Doe
+            image_url:
+              type: string
+              example: https://example.com/updated-image.jpg
     responses:
       200:
         description: Beneficiary updated successfully
@@ -725,6 +856,9 @@ def update_beneficiary(beneficiary_id):
                 story:
                   type: string
                   example: Updated story about Jane Doe
+                image_url:
+                  type: string
+                  example: https://example.com/updated-image.jpg
                 charity_id:
                   type: integer
                   example: 1
@@ -737,6 +871,8 @@ def update_beneficiary(beneficiary_id):
         beneficiary.name = data['name']
     if 'story' in data:
         beneficiary.story = data['story']
+    if 'image_url' in data:
+        beneficiary.image_url = data['image_url']
     db.session.commit()
     return jsonify(beneficiary.to_dict()), 200
 
@@ -764,6 +900,7 @@ def delete_beneficiary(beneficiary_id):
     db.session.delete(beneficiary)
     db.session.commit()
     return '', 204
+
 
 # Application Routes
 @app.route('/applications', methods=['GET'])
@@ -1016,6 +1153,79 @@ def delete_application(application_id):
     db.session.delete(application)
     db.session.commit()
     return '', 204
+
+# Admin login route
+@app.route('/admin/login', methods=['POST'])
+def admin_login():
+    """
+    Admin login
+    ---
+    parameters:
+      - name: body
+        in: body
+        description: Admin login information
+        required: true
+        schema:
+          type: object
+          properties:
+            email:
+              type: string
+              example: admin@example.com
+            password:
+              type: string
+              example: adminpassword123
+    responses:
+      200:
+        description: Successful login with JWT token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                  example: <jwt_token>
+      401:
+        description: Invalid email or password
+    """
+    data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
+    
+    admin = Admin.query.filter_by(email=email).first()
+    if admin and  bcrypt.checkpw(data['password'].encode('utf-8'), admin.password.encode('utf-8')):
+        access_token = create_access_token(identity={'id': admin.id, 'username': admin.username})
+        return jsonify(access_token=access_token), 200
+    
+    return jsonify({"msg": "Invalid email or password"}), 401
+
+# Admin logout route
+@app.route('/admin/logout', methods=['POST'])
+@jwt_required()
+def admin_logout():
+    """
+    Logout an admin
+    ---
+    responses:
+      200:
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: Logout successful
+    """
+    jti = get_jwt()['jti']
+    BLACKLIST.add(jti)
+    return jsonify(msg="Logout successful"), 200
+
+# @jwt.token_in_blacklist_loader
+# def check_if_token_in_blacklist(decrypted_token):
+#     return decrypted_token['jti'] in BLACKLIST
+
 
 if __name__ == '__main__':
     app.run(debug=True)
