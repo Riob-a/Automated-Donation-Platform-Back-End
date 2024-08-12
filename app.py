@@ -104,30 +104,6 @@ def register_user():
     db.session.commit()
     return jsonify(new_user.to_dict()), 201
 
-
-
-@app.route('/signup', methods=['POST'])
-def signup():
-    username = request.form['username']
-    email = request.form['email']
-    
-    # Specific credentials for admin
-    if username == 'adminUser' and email == 'admin@example.com':
-        return redirect(url_for('admin_dashboard'))
-    
-    # Normal signup process here
-    # ...
-    return redirect(url_for('user_dashboard'))
-
-@app.route('/admin-dashboard')
-def admin_dashboard():
-    return "Welcome to the admin dashboard!"
-
-@app.route('/user-dashboard')
-def user_dashboard():
-    return "Welcome to the user dashboard!"
-
-
 @app.route('/users/login', methods=['POST'])
 def login_user():
     """
@@ -1253,3 +1229,4 @@ def admin_logout():
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
+
