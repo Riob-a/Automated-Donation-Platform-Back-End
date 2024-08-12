@@ -85,6 +85,70 @@ def register_user():
     db.session.commit()
     return jsonify(new_user.to_dict()), 201
 
+
+
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    username = request.form['username']
+    email = request.form['email']
+    
+    # Specific credentials for admin
+    if username == 'adminUser' and email == 'admin@example.com':
+        return redirect(url_for('admin_dashboard'))
+    
+    # Normal signup process here
+    # ...
+    return redirect(url_for('user_dashboard'))
+
+@app.route('/admin-dashboard')
+def admin_dashboard():
+    return "Welcome to the admin dashboard!"
+
+@app.route('/user-dashboard')
+def user_dashboard():
+    return "Welcome to the user dashboard!"
+
+
+
+
+
+
+
+
+
+
+# @app.route('/api/signup', methods=['POST'])
+# def signup():
+#     # Extract data from the request
+#     data = request.json  
+#     username = data.get('username')
+#     email = data.get('email')
+#     password = data.get('password')
+
+#     # Example of simple input validation
+#     if not username or not email or not password:
+#         return jsonify({'error': 'Missing fields'}), 400
+
+#     # Here you would typically hash the password and save the user info to a database
+#     # Example:
+#     # hashed_password = hash_password(password)
+#     # save_user_to_db(username, email, hashed_password)
+
+#     # Respond with a success message
+#     return jsonify({'message': f'User {username} registered successfully!'}), 201
+
+# # You can also add other routes or functionality as needed
+# # For example, a health check route
+# @app.route('/api/health', methods=['GET'])
+# def health_check():
+#     return jsonify({'status': 'OK'}), 200
+
+
+
+
+
+
 @app.route('/users/login', methods=['POST'])
 def login_user():
     """
@@ -112,12 +176,29 @@ def login_user():
       401:
         description: Invalid email or password
     """
-    data = request.get_json()
-    user = User.query.filter_by(email=data['email']).first()
-    if user and bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
+    # data = request.get_json()
+    # user = User.query.filter_by(email=data['email']).first()
+    # if user and bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
+    #     access_token = create_access_token(identity={'id': user.id, 'username': user.username})
+    #     return jsonify(access_token=access_token), 200
+    # return jsonify({'msg': 'Invalid email or password'}), 401
+
+    # data = request.get_json()
+
+    # Validate input
+    email = data.get('email')
+    password = data.get('password')
+    if not email or not password:
+        return jsonify({'msg': 'Email and password are required'}), 400
+
+    # Fetch user from database
+    user = User.query.filter_by(email=email).first()
+    if user and bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
+        # Generate JWT token
         access_token = create_access_token(identity={'id': user.id, 'username': user.username})
         return jsonify(access_token=access_token), 200
-    return jsonify({'msg': 'Invalid email or password'}), 401
+    else:
+        return jsonify({'msg': 'Invalid email or password'}), 401
 
 @app.route('/users/protected', methods=['GET'])
 @jwt_required()
