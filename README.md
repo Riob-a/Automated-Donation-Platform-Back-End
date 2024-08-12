@@ -1,4 +1,4 @@
-# ReadFinder
+# Automated-Donation-Platform
 
 #### Date, 7/8/2024
 
