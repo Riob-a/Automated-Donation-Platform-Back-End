@@ -9,7 +9,7 @@ from flasgger import Swagger
 from models import db, User, Charity, Donation, Beneficiary, Application, Admin, UnapprovedCharity
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///App.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
 
@@ -145,56 +145,55 @@ def login_user():
     
     return jsonify({'msg': 'Invalid email or password'}), 401
 
-
-# @app.route('/users/protected', methods=['GET'])
-# @jwt_required()
-# def protected_user():
-#     """
-#     Access protected user data
-#     ---
-#     responses:
-#       200:
-#         description: Successfully retrieved user data
-#         content:
-#           application/json:
-#             schema:
-#               type: object
-#               properties:
-#                 logged_in_as:
-#                   type: object
-#                   properties:
-#                     id:
-#                       type: integer
-#                       example: 1
-#                     username:
-#                       type: string
-#                       example: john_doe
-#     """
-#     current_user = get_jwt_identity()
-#     return jsonify(logged_in_as=current_user), 200
+@app.route('/users/protected', methods=['GET'])
+@jwt_required()
+def protected_user():
+    """
+    Access protected user data
+    ---
+    responses:
+      200:
+        description: Successfully retrieved user data
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logged_in_as:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    username:
+                      type: string
+                      example: john_doe
+    """
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
 
 # Logout Route
-# @app.route('/logout', methods=['POST'])
-# @jwt_required()
-# def logout():
-#     """
-#     Logout a user
-#     ---
-#     responses:
-#       200:
-#         description: Logout successful
-#         content:
-#           application/json:
-#             schema:
-#               type: object
-#               properties:
-#                 msg:
-#                   type: string
-#                   example: Logout successful
-#     """
-#     jti = get_jwt()['jti']
-#     BLACKLIST.add(jti)
-#     return jsonify(msg="Logout successful"), 200
+@app.route('/logout', methods=['POST'])
+@jwt_required()
+def logout():
+    """
+    Logout a user
+    ---
+    responses:
+      200:
+        description: Logout successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: Logout successful
+    """
+    jti = get_jwt()['jti']
+    BLACKLIST.add(jti)
+    return jsonify(msg="Logout successful"), 200
 
 # Charity Routes
 @app.route('/charities', methods=['GET'])
