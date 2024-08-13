@@ -1192,10 +1192,10 @@ def admin_login():
     """
     data = request.get_json()
     admin = Admin.query.filter_by(email=data['email']).first()
-    
+
     if admin and bcrypt.checkpw(data['password'].encode('utf-8'), admin.password.encode('utf-8')):
         return jsonify({'message': 'Login successful'}), 200
-    
+
     return jsonify({'msg': 'Invalid email or password'}), 401
 
 # Admin logout route
