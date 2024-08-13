@@ -1147,7 +1147,7 @@ def delete_application(application_id):
       204:
         description: Application deleted successfully
       404:
-        description: Application not found
+        descriptionn: Application not found
     """
     application = Application.query.get(application_id)
     if not application:
