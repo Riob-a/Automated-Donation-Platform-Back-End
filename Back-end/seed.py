@@ -1,5 +1,5 @@
 from app import app, db
-from models import User, Charity, Donation, Beneficiary, Application
+from models import User, Charity, Donation, Beneficiary, Application, Admin
 import bcrypt
 
 # Sample data
@@ -63,6 +63,10 @@ applications = [
     }
 ]
 
+admins = [
+    {'username': 'derrick_admin', 'email': 'admin@example.com', 'password': 'adminsecurepassword'}
+]
+
 def seed_db():
     with app.app_context():
         # Create tables
@@ -78,6 +82,16 @@ def seed_db():
                 is_admin=user_data['is_admin']
             )
             db.session.add(user)
+
+        # Seed admin users with hashed passwords
+        for admin_data in admins:
+            hashed_password = bcrypt.hashpw(admin_data['password'].encode('utf-8'), bcrypt.gensalt())
+            admin = Admin(
+                username=admin_data['username'],
+                email=admin_data['email'],
+                password=hashed_password.decode('utf-8')
+            )
+            db.session.add(admin)
 
         # Seed charities
         for charity_data in charities:

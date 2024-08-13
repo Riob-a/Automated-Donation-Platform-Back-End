@@ -125,23 +125,24 @@ def login_user():
               example: password123
     responses:
       200:
-        description: Successful login with JWT token
+        description: Successful login
         content:
           application/json:
             schema:
               type: object
               properties:
-                access_token:
+                message:
                   type: string
-                  example: <jwt_token>
+                  example: 'Login successful'
       401:
         description: Invalid email or password
     """
     data = request.get_json()
     user = User.query.filter_by(email=data['email']).first()
+    
     if user and bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
-        access_token = create_access_token(identity={'id': user.id, 'username': user.username})
-        return jsonify(access_token=access_token), 200
+        return jsonify({'message': 'Login successful'}), 200
+    
     return jsonify({'msg': 'Invalid email or password'}), 401
 
 @app.route('/users/protected', methods=['GET'])
@@ -1176,32 +1177,28 @@ def admin_login():
               example: adminpassword123
     responses:
       200:
-        description: Successful login with JWT token
+        description: Successful login
         content:
           application/json:
             schema:
               type: object
               properties:
-                access_token:
+                message:
                   type: string
-                  example: <jwt_token>
+                  example: 'Login successful'
       401:
         description: Invalid email or password
     """
     data = request.get_json()
-    email = data.get('email')
-    password = data.get('password')
+    admin = Admin.query.filter_by(email=data['email']).first()
     
-    admin = Admin.query.filter_by(email=email).first()
-    if admin and  bcrypt.checkpw(data['password'].encode('utf-8'), admin.password.encode('utf-8')):
-        access_token = create_access_token(identity={'id': admin.id, 'username': admin.username})
-        return jsonify(access_token=access_token), 200
+    if admin and bcrypt.checkpw(data['password'].encode('utf-8'), admin.password.encode('utf-8')):
+        return jsonify({'message': 'Login successful'}), 200
     
-    return jsonify({"msg": "Invalid email or password"}), 401
+    return jsonify({'msg': 'Invalid email or password'}), 401
 
 # Admin logout route
 @app.route('/admin/logout', methods=['POST'])
-@jwt_required()
 def admin_logout():
     """
     Logout an admin
@@ -1214,18 +1211,11 @@ def admin_logout():
             schema:
               type: object
               properties:
-                msg:
+                message:
                   type: string
-                  example: Logout successful
+                  example: 'Logout successful'
     """
-    jti = get_jwt()['jti']
-    BLACKLIST.add(jti)
-    return jsonify(msg="Logout successful"), 200
-
-# @jwt.token_in_blacklist_loader
-# def check_if_token_in_blacklist(decrypted_token):
-#     return decrypted_token['jti'] in BLACKLIST
-
+    return jsonify({'message': 'Logout successful'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
