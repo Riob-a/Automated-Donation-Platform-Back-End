@@ -64,7 +64,8 @@ applications = [
 ]
 
 admins = [
-    {'username': 'derrick_admin', 'email': 'admin@example.com', 'password': 'adminsecurepassword'}
+    {'username': 'derrick_admin', 'email': 'admin@example.com', 'password': 'adminsecurepassword'},
+    {'username': 'test', 'email': 'test@email.com', 'password': 'test1password'}
 ]
 
 def seed_db():
