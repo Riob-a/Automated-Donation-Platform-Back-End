@@ -1212,6 +1212,74 @@ def admin_login():
 
     return jsonify({'msg': 'Invalid email or password'}), 401
 
+# Admin register route
+@app.route('/admin/register', methods=['POST'])
+def admin_register():
+    """
+    Admin registration
+    ---
+    tags:
+      - Admin
+    parameters:
+      - in: body
+        name: body
+        description: Admin registration information
+        required: true
+        schema:
+          type: object
+          properties:
+            username:
+              type: string
+              example: adminuser
+            email:
+              type: string
+              example: admin@example.com
+            password:
+              type: string
+              example: adminpassword123
+    responses:
+      201:
+        description: Admin successfully registered
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: 'Admin successfully registered'
+      400:
+        description: Email already exists
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: 'Email already exists'
+    """
+    data = request.get_json()
+    username = data.get('username')
+    email = data.get('email')
+    password = data.get('password')
+
+    # Check if the email is already registered
+    if Admin.query.filter_by(email=email).first():
+        return jsonify({'msg': 'Email already exists'}), 400
+
+    # Hash the password
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    # Create a new admin instance
+    new_admin = Admin(username=username, email=email, password=hashed_password)
+
+    # Add the new admin to the database
+    db.session.add(new_admin)
+    db.session.commit()
+
+    return jsonify({'message': 'Admin successfully registered'}), 201
+
 # Admin logout route
 @app.route('/admin/logout', methods=['POST'])
 def admin_logout():
