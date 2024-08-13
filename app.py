@@ -1201,12 +1201,13 @@ def admin_login():
                   example: 'Invalid email or password'
     """
     data = request.get_json()
+    email = data.get('email')
+    password = data.get('password')
 
-    # Temporarily hardcoded admin user for testing
-    hardcoded_admin_email = 'admin@example.com'
-    hardcoded_admin_password = bcrypt.hashpw('adminpassword123'.encode('utf-8'), bcrypt.gensalt())
+    # Search for the admin by email
+    admin = Admin.query.filter_by(email=email).first()
 
-    if data['email'] == hardcoded_admin_email and bcrypt.checkpw(data['password'].encode('utf-8'), hardcoded_admin_password):
+    if admin and bcrypt.checkpw(password.encode('utf-8'), admin.password.encode('utf-8')):
         return jsonify({'message': 'Login successful'}), 200
 
     return jsonify({'msg': 'Invalid email or password'}), 401
