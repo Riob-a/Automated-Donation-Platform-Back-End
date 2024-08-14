@@ -912,6 +912,9 @@ def update_beneficiary(beneficiary_id):
             image_url:
               type: string
               example: https://example.com/updated-image.jpg
+            charity_id:
+              type: integer
+              example: 1
     responses:
       200:
         description: Beneficiary updated successfully
@@ -940,12 +943,22 @@ def update_beneficiary(beneficiary_id):
     """
     beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
     data = request.get_json()
+
     if 'name' in data:
         beneficiary.name = data['name']
     if 'story' in data:
         beneficiary.story = data['story']
     if 'image_url' in data:
         beneficiary.image_url = data['image_url']
+
+    # Update charity_id if provided
+    if 'charity_id' in data:
+        charity = Charity.query.get(data['charity_id'])
+        if charity:
+            beneficiary.charity_id = data['charity_id']
+        else:
+            return jsonify({'msg': 'Charity not found'}), 404
+
     db.session.commit()
     return jsonify(beneficiary.to_dict()), 200
 
