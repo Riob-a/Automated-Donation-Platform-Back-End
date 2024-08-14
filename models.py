@@ -29,7 +29,7 @@ class Charity(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
     website = db.Column(db.String(200))
-    image_url = db.Column(db.String(500))
+    image_url = db.Column(db.String(500))  # Field for image URL
     donations = db.relationship('Donation', backref='charity', lazy=True, passive_deletes=True)
     beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True, passive_deletes=True)
 
@@ -54,7 +54,6 @@ class UnapprovedCharity(db.Model):
     description = db.Column(db.Text, nullable=False)
     website = db.Column(db.String(200))
     image_url = db.Column(db.String(500))
-    status = db.Column(db.String(50), nullable=False, default='Pending')
     date_submitted = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):
@@ -67,7 +66,6 @@ class UnapprovedCharity(db.Model):
             'description': self.description,
             'website': self.website,
             'image_url': self.image_url,
-            'status':self.status,
             'date_submitted': self.date_submitted
         }
 

@@ -538,85 +538,26 @@ def create_unapproved_charity():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
-
-@app.route('/unapproved-charities/<int:id>', methods=['PATCH'])
-def update_unapproved_charity_status(id):
-    """
-    Update the status of an unapproved charity (Approve or Reject)
-    ---
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-        description: The ID of the unapproved charity
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            properties:
-              status:
-                type: string
-                example: "Approved"
-    responses:
-      200:
-        description: Charity status updated successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  example: 1
-                status:
-                  type: string
-                  example: "Approved"
-      404:
-        description: Charity not found
-      500:
-        description: Server error
-    """
-    try:
-        charity = UnapprovedCharity.query.get(id)
-        if not charity:
-            return jsonify({'error': 'Charity not found'}), 404
-
-        data = request.get_json()
-        status = data.get('status')
-        if status not in ['Approved', 'Rejected']:
-            return jsonify({'error': 'Invalid status value'}), 400
-
-        charity.status = status
-        db.session.commit()
-
-        return jsonify({'id': charity.id, 'status': charity.status}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 def move_unapproved_charities():
     try:
-        # Retrieve only charities that have been approved
-        approved_charities = UnapprovedCharity.query.filter_by(status="Approved").all()
+        # Retrieve all unapproved charities
+        unapproved_charities = UnapprovedCharity.query.all()
         
-        # Iterate through each approved charity
-        for approved in approved_charities:
+        # Iterate through each unapproved charity
+        for unapproved in unapproved_charities:
             # Create a new Charity instance
             new_charity = Charity(
-                name=approved.name,
-                description=approved.description,
-                website=approved.website,
-                image_url=approved.image_url
+                name=unapproved.name,
+                description=unapproved.description,
+                website=unapproved.website,
+                image_url=unapproved.image_url
             )
             
             # Add the new charity to the database session
             db.session.add(new_charity)
             
-            # Delete the approved charity from the UnapprovedCharity model
-            db.session.delete(approved)
+            # Delete the unapproved charity from the UnapprovedCharity model
+            db.session.delete(unapproved)
         
         # Commit the changes to the database
         db.session.commit()
