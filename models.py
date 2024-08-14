@@ -99,6 +99,8 @@ class Beneficiary(db.Model):
     image_url = db.Column(db.String(500))
     charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
 
+    charity = db.relationship('Charity', backref=db.backref('beneficiaries', lazy=True))
+
     def __repr__(self):
         return f"<Beneficiary {self.name}>"
 
@@ -107,8 +109,11 @@ class Beneficiary(db.Model):
             'id': self.id,
             'name': self.name,
             'story': self.story,
-            'image_url':self.image_url,
-            'charity_id': self.charity_id
+            'image_url': self.image_url,
+            'charity': {
+                'id': self.charity.id,
+                'name': self.charity.name
+            } if self.charity else None
         }
 
 class TokenBlacklist(db.Model):

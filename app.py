@@ -766,9 +766,15 @@ def list_beneficiaries():
                   image_url:
                     type: string
                     example: https://example.com/image.jpg
-                  charity_id:
-                    type: integer
-                    example: 1
+                  charity:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: Charity Name
     """
     beneficiaries = Beneficiary.query.all()
     return jsonify([beneficiary.to_dict() for beneficiary in beneficiaries]), 200
@@ -823,6 +829,10 @@ def create_beneficiary():
                   example: 1
     """
     data = request.get_json()
+    charity = Charity.query.get(data['charity_id'])
+    if not charity:
+        return jsonify({'msg': 'Charity not found'}), 404
+    
     new_beneficiary = Beneficiary(
         name=data['name'],
         story=data.get('story', ''),
