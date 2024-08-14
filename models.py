@@ -99,7 +99,7 @@ class Beneficiary(db.Model):
     image_url = db.Column(db.String(500))
     charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
 
-    charity = db.relationship('Charity', backref=db.backref('beneficiaries', lazy=True))
+    # charity = db.relationship('Charity', backref=db.backref('beneficiaries', lazy=True))
 
     def __repr__(self):
         return f"<Beneficiary {self.name}>"
