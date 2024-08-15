@@ -586,17 +586,33 @@ def update_unapproved_charity(charity_id):
                 status:
                   type: string
                   example: Approved
+                message:
+                  type: string
+                  example: "Your charity has been approved!"
       404:
         description: Charity not found
     """
     charity = UnapprovedCharity.query.get_or_404(charity_id)
     data = request.get_json()
     status = data.get('status')
+    
     if status not in ['Approved', 'Rejected']:
         return jsonify({'error': 'Invalid status'}), 400
-    # Update the charity status here if needed
+    
     charity.status = status
     db.session.commit()
+    
+    if status == 'Approved':
+        return jsonify({
+            'id': charity.id,
+            'name': charity.name,
+            'description': charity.description,
+            'website': charity.website,
+            'image_url': charity.image_url,
+            'status': charity.status,
+            'message': 'Your charity has been approved!'
+        }), 200
+    
     return jsonify(charity.to_dict()), 200
     
 def move_unapproved_charities():
