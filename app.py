@@ -537,69 +537,7 @@ def create_unapproved_charity():
         return jsonify(new_charity.to_dict()), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/unapproved-charities/<int:charity_id>', methods=['PATCH'])
-def update_unapproved_charity(charity_id):
-    """
-    Update the status of an unapproved charity
-    ---
-    parameters:
-      - name: charity_id
-        in: path
-        description: ID of the charity to update
-        required: true
-        schema:
-          type: integer
-      - name: body
-        in: body
-        description: Updated charity information
-        required: true
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: Approved
-    responses:
-      200:
-        description: Charity updated successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                id:
-                  type: integer
-                  example: 1
-                name:
-                  type: string
-                  example: Charity A
-                description:
-                  type: string
-                  example: A description of Charity A
-                website:
-                  type: string
-                  example: http://charitya.org
-                image_url:
-                  type: string
-                  example: http://charitya.org/image.jpg
-                status:
-                  type: string
-                  example: Approved
-      404:
-        description: Charity not found
-    """
-    charity = UnapprovedCharity.query.get_or_404(charity_id)
-    data = request.get_json()
-    status = data.get('status')
-    if status not in ['Approved', 'Rejected']:
-        return jsonify({'error': 'Invalid status'}), 400
-    # Update the charity status here if needed
-    charity.status = status
-    db.session.commit()
-    return jsonify(charity.to_dict()), 200
-
-@app.route('/move-unapproved-charities', methods=['POST'])
+    
 def move_unapproved_charities():
     try:
         # Retrieve all unapproved charities
@@ -630,6 +568,28 @@ def move_unapproved_charities():
         # Handle any exceptions and rollback changes if necessary
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+    
+#Moves data from Unapproaved model to Charities model    
+@app.route('/move-unapproved-charities', methods=['POST'])
+def move_charities():
+    """
+    Move unapproved charities to the approved charities list
+    ---
+    responses:
+      200:
+        description: Unapproved charities moved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                  example: "Charities have been approved successfully"
+      500:
+        description: Server error
+    """
+    return move_unapproved_charities()
 
 # Donation Routes
 @app.route('/donations', methods=['POST'])
@@ -745,15 +705,9 @@ def list_beneficiaries():
                   image_url:
                     type: string
                     example: https://example.com/image.jpg
-                  charity:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                        example: 1
-                      name:
-                        type: string
-                        example: Charity Name
+                  charity_id:
+                    type: integer
+                    example: 1
     """
     beneficiaries = Beneficiary.query.all()
     return jsonify([beneficiary.to_dict() for beneficiary in beneficiaries]), 200
@@ -808,10 +762,6 @@ def create_beneficiary():
                   example: 1
     """
     data = request.get_json()
-    charity = Charity.query.get(data['charity_id'])
-    if not charity:
-        return jsonify({'msg': 'Charity not found'}), 404
-    
     new_beneficiary = Beneficiary(
         name=data['name'],
         story=data.get('story', ''),
@@ -891,9 +841,6 @@ def update_beneficiary(beneficiary_id):
             image_url:
               type: string
               example: https://example.com/updated-image.jpg
-            charity_id:
-              type: integer
-              example: 1
     responses:
       200:
         description: Beneficiary updated successfully
@@ -922,22 +869,12 @@ def update_beneficiary(beneficiary_id):
     """
     beneficiary = Beneficiary.query.get_or_404(beneficiary_id)
     data = request.get_json()
-
     if 'name' in data:
         beneficiary.name = data['name']
     if 'story' in data:
         beneficiary.story = data['story']
     if 'image_url' in data:
         beneficiary.image_url = data['image_url']
-
-    # Update charity_id if provided
-    if 'charity_id' in data:
-        charity = Charity.query.get(data['charity_id'])
-        if charity:
-            beneficiary.charity_id = data['charity_id']
-        else:
-            return jsonify({'msg': 'Charity not found'}), 404
-
     db.session.commit()
     return jsonify(beneficiary.to_dict()), 200
 
@@ -1365,4 +1302,3 @@ def admin_logout():
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
-
