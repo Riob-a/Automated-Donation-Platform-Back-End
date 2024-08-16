@@ -538,6 +538,87 @@ def create_unapproved_charity():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     
+@app.route('/unapproved-charities/<int:id>', methods=['PATCH'])
+def update_unapproved_charity_status(id):
+    """
+    Approve or reject an unapproved charity
+    ---
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                example: "Approved" or "Rejected"
+    responses:
+      200:
+        description: Charity status updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                name:
+                  type: string
+                  example: "Charity Name"
+                description:
+                  type: string
+                  example: "Charity Description"
+                website:
+                  type: string
+                  example: "https://www.charitywebsite.org"
+                image_url:
+                  type: string
+                  example: "https://www.example.com/image.jpg"
+                status:
+                  type: string
+                  example: "Approved"
+      400:
+        description: Invalid input data
+      404:
+        description: Charity not found
+      500:
+        description: Server error
+    """
+    try:
+        data = request.get_json()
+        if not data or 'status' not in data:
+            return jsonify({'error': 'Invalid input data'}), 400
+
+        unapproved_charity = UnapprovedCharity.query.get(id)
+        if not unapproved_charity:
+            return jsonify({'error': 'Charity not found'}), 404
+
+        if data['status'] == 'Approved':
+            new_charity = Charity(
+                name=unapproved_charity.name,
+                description=unapproved_charity.description,
+                website=unapproved_charity.website,
+                image_url=unapproved_charity.image_url
+            )
+            db.session.add(new_charity)
+            db.session.delete(unapproved_charity)
+            db.session.commit()
+            return jsonify(new_charity.to_dict()), 200
+
+        elif data['status'] == 'Rejected':
+            db.session.delete(unapproved_charity)
+            db.session.commit()
+            return jsonify({'message': 'Application has been rejected!'}), 200
+
+        else:
+            return jsonify({'error': 'Invalid status'}), 400
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+    
 def move_unapproved_charities():
     try:
         # Retrieve all unapproved charities
