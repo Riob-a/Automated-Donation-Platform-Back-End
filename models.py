@@ -8,7 +8,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=False)  # Store hashed password
+    password = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     donations = db.relationship('Donation', backref='donor', lazy=True)
 
@@ -29,7 +29,7 @@ class Charity(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.Text, nullable=False)
     website = db.Column(db.String(200))
-    image_url = db.Column(db.String(500))  # Field for image URL
+    image_url = db.Column(db.String(500))
     donations = db.relationship('Donation', backref='charity', lazy=True, passive_deletes=True)
     beneficiaries = db.relationship('Beneficiary', backref='charity', lazy=True, passive_deletes=True)
 
@@ -75,7 +75,7 @@ class Donation(db.Model):
     amount = db.Column(db.Float, nullable=False)
     anonymous = db.Column(db.Boolean, default=False)
     donation_date = db.Column(db.DateTime, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)#set to true after testing
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
 
     def __repr__(self):
@@ -98,8 +98,6 @@ class Beneficiary(db.Model):
     story = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(500))
     charity_id = db.Column(db.Integer, db.ForeignKey('charities.id', ondelete='SET NULL'), nullable=True)
-
-    # charity = db.relationship('Charity', backref=db.backref('beneficiaries', lazy=True))
 
     def __repr__(self):
         return f"<Beneficiary {self.name}>"
@@ -124,30 +122,6 @@ class TokenBlacklist(db.Model):
     def __repr__(self):
         return f"<TokenBlacklist {self.token}>"
     
-class Application(db.Model):
-    __tablename__ = 'applications'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    website = db.Column(db.String(200))
-    image_url = db.Column(db.String(500))
-    date_submitted = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='Pending')
-
-    def __repr__(self):
-        return f"<Application {self.name}>"
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
-            'website': self.website,
-            'image_url': self.image_url,
-            'date_submitted': self.date_submitted,
-            'status': self.status
-        }
-
 class Admin(db.Model):
     __tablename__ = 'admins'
     id = db.Column(db.Integer, primary_key=True)
@@ -164,4 +138,29 @@ class Admin(db.Model):
             'username': self.username,
             'email': self.email,
         }
+    
+# class Application(db.Model):
+#     __tablename__ = 'applications'
+#     id = db.Column(db.Integer, primary_key=True)
+#     name = db.Column(db.String(100), nullable=False)
+#     description = db.Column(db.Text, nullable=False)
+#     website = db.Column(db.String(200))
+#     image_url = db.Column(db.String(500))
+#     date_submitted = db.Column(db.DateTime, default=datetime.utcnow)
+#     status = db.Column(db.String(20), default='Pending')
+
+#     def __repr__(self):
+#         return f"<Application {self.name}>"
+
+#     def to_dict(self):
+#         return {
+#             'id': self.id,
+#             'name': self.name,
+#             'description': self.description,
+#             'website': self.website,
+#             'image_url': self.image_url,
+#             'date_submitted': self.date_submitted,
+#             'status': self.status
+#         }
+
 
