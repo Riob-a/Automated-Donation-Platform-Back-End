@@ -598,7 +598,8 @@ def update_unapproved_charity(charity_id):
     charity.status = status
     db.session.commit()
     return jsonify(charity.to_dict()), 200
-    
+
+@app.route('/move-unapproved-charities', methods=['POST'])
 def move_unapproved_charities():
     try:
         # Retrieve all unapproved charities
@@ -629,28 +630,6 @@ def move_unapproved_charities():
         # Handle any exceptions and rollback changes if necessary
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-    
-#Moves data from Unapproaved model to Charities model    
-@app.route('/move-unapproved-charities', methods=['POST'])
-def move_charities():
-    """
-    Move unapproved charities to the approved charities list
-    ---
-    responses:
-      200:
-        description: Unapproved charities moved successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: "Charities have been approved successfully"
-      500:
-        description: Server error
-    """
-    return move_unapproved_charities()
 
 # Donation Routes
 @app.route('/donations', methods=['POST'])
