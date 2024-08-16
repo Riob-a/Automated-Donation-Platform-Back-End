@@ -3,6 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt, get_jwt_identity
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 import bcrypt
 import os
 from flasgger import Swagger
@@ -12,6 +15,13 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URI')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY')
+#  Cloudinary
+cloudinary.config(
+    cloud_name="dgwcrqoxr",
+    api_key="478447933862322",
+    api_secret="CLOUDINARY_URL=cloudinary://478447933862322:gOJlq809i9mQpgZ2f0Mu3Sv_o3s@dgwcrqoxr",
+    secure=True
+)
 
 # Initialize extensions
 db.init_app(app)
@@ -197,6 +207,7 @@ def login_user():
 #     return jsonify(msg="Logout successful"), 200
 
 # Charity Routes
+
 @app.route('/charities', methods=['GET'])
 def list_charities():
     """
@@ -255,7 +266,7 @@ def create_charity():
               example: http://charityb.org
             image_url:
               type: string
-              example: http://charityb.org/image.jpg
+              example: base64_encoded_image_data
     responses:
       201:
         description: Charity created successfully
@@ -278,14 +289,21 @@ def create_charity():
                   example: http://charityb.org
                 image_url:
                   type: string
-                  example: http://charityb.org/image.jpg
+                  example: http://res.cloudinary.com/.../image/upload/...
     """
     data = request.get_json()
+
+    # Upload image to Cloudinary if image data is provided
+    image_url = None
+    if 'image_url' in data:
+        upload_result = cloudinary.uploader.upload(data['image_url'])
+        image_url = upload_result.get('url')
+
     new_charity = Charity(
         name=data['name'],
         description=data['description'],
         website=data.get('website'),
-        image_url=data.get('image_url')
+        image_url=image_url
     )
     db.session.add(new_charity)
     db.session.commit()
@@ -325,7 +343,7 @@ def get_charity(charity_id):
                   example: http://charitya.org
                 image_url:
                   type: string
-                  example: http://charitya.org/image.jpg
+                  example: http://res.cloudinary.com/.../image/upload/...
       404:
         description: Charity not found
     """
@@ -362,7 +380,7 @@ def update_charity(charity_id):
               example: http://charitya-updated.org
             image_url:
               type: string
-              example: http://charitya-updated.org/image.jpg
+              example: base64_encoded_image_data
     responses:
       200:
         description: Charity updated successfully
@@ -385,12 +403,13 @@ def update_charity(charity_id):
                   example: http://charitya-updated.org
                 image_url:
                   type: string
-                  example: http://charitya-updated.org/image.jpg
+                  example: http://res.cloudinary.com/.../image/upload/...
       404:
         description: Charity not found
     """
     charity = Charity.query.get_or_404(charity_id)
     data = request.get_json()
+
     if 'name' in data:
         charity.name = data['name']
     if 'description' in data:
@@ -398,7 +417,10 @@ def update_charity(charity_id):
     if 'website' in data:
         charity.website = data['website']
     if 'image_url' in data:
-        charity.image_url = data['image_url']
+        # Upload new image to Cloudinary
+        upload_result = cloudinary.uploader.upload(data['image_url'])
+        charity.image_url = upload_result.get('url')
+
     db.session.commit()
     return jsonify(charity.to_dict()), 200
 
@@ -428,6 +450,7 @@ def delete_charity(charity_id):
     return '', 204
 
 # Unapproved charities
+
 @app.route('/unapproved-charities', methods=['GET'])
 def get_unapproved_charities():
     """
@@ -491,7 +514,7 @@ def create_unapproved_charity():
                 example: "https://www.charitywebsite.org"
               image_url:
                 type: string
-                example: "https://www.example.com/image.jpg"
+                example: "base64_encoded_image_data"
     responses:
       201:
         description: Unapproved charity created successfully
@@ -514,7 +537,7 @@ def create_unapproved_charity():
                   example: "https://www.charitywebsite.org"
                 image_url:
                   type: string
-                  example: "https://www.example.com/image.jpg"
+                  example: "https://res.cloudinary.com/.../image/upload/..."
       400:
         description: Invalid input data
       500:
@@ -525,11 +548,16 @@ def create_unapproved_charity():
         if not data or not all(key in data for key in ('name', 'description')):
             return jsonify({'error': 'Invalid input data'}), 400
 
+        image_url = None
+        if 'image_url' in data:
+            upload_result = cloudinary.uploader.upload(data['image_url'])
+            image_url = upload_result.get('url')
+
         new_charity = UnapprovedCharity(
             name=data.get('name'),
             description=data.get('description'),
             website=data.get('website'),
-            image_url=data.get('image_url')
+            image_url=image_url
         )
         db.session.add(new_charity)
         db.session.commit()
@@ -591,35 +619,48 @@ def update_unapproved_charity(charity_id):
                   example: "Your charity has been approved!"
       404:
         description: Charity not found
+      400:
+        description: Invalid status
     """
     charity = UnapprovedCharity.query.get_or_404(charity_id)
     data = request.get_json()
     status = data.get('status')
-    
+
     if status not in ['Approved', 'Rejected']:
         return jsonify({'error': 'Invalid status'}), 400
-    
+
     charity.status = status
     db.session.commit()
-    
+
     if status == 'Approved':
+        # If the charity is approved, move it to the approved charities list
+        approved_charity = Charity(
+            name=charity.name,
+            description=charity.description,
+            website=charity.website,
+            image_url=charity.image_url
+        )
+        db.session.add(approved_charity)
+        db.session.delete(charity)
+        db.session.commit()
+
         return jsonify({
-            'id': charity.id,
-            'name': charity.name,
-            'description': charity.description,
-            'website': charity.website,
-            'image_url': charity.image_url,
-            'status': charity.status,
+            'id': approved_charity.id,
+            'name': approved_charity.name,
+            'description': approved_charity.description,
+            'website': approved_charity.website,
+            'image_url': approved_charity.image_url,
+            'status': 'Approved',
             'message': 'Your charity has been approved!'
         }), 200
-    
+
     return jsonify(charity.to_dict()), 200
-    
+
 def move_unapproved_charities():
     try:
         # Retrieve all unapproved charities
         unapproved_charities = UnapprovedCharity.query.all()
-        
+
         # Iterate through each unapproved charity
         for unapproved in unapproved_charities:
             # Create a new Charity instance
@@ -629,24 +670,24 @@ def move_unapproved_charities():
                 website=unapproved.website,
                 image_url=unapproved.image_url
             )
-            
+
             # Add the new charity to the database session
             db.session.add(new_charity)
-            
+
             # Delete the unapproved charity from the UnapprovedCharity model
             db.session.delete(unapproved)
-        
+
         # Commit the changes to the database
         db.session.commit()
-        
+
         return jsonify({"message": "Charities have been approved successfully"}), 200
-    
+
     except Exception as e:
         # Handle any exceptions and rollback changes if necessary
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-    
-#Moves data from Unapproaved model to Charities model    
+
+# Moves data from Unapproved model to Charities model    
 @app.route('/move-unapproved-charities', methods=['POST'])
 def move_charities():
     """
@@ -781,7 +822,7 @@ def list_beneficiaries():
                     example: A story about Jane Doe
                   image_url:
                     type: string
-                    example: https://example.com/image.jpg
+                    example: https://res.cloudinary.com/.../image/upload/...
                   charity:
                     type: object
                     properties:
@@ -816,7 +857,7 @@ def create_beneficiary():
               example: A story about Jane Doe
             image_url:
               type: string
-              example: https://example.com/image.jpg
+              example: base64_encoded_image_data
             charity_id:
               type: integer
               example: 1
@@ -839,7 +880,7 @@ def create_beneficiary():
                   example: A story about Jane Doe
                 image_url:
                   type: string
-                  example: https://example.com/image.jpg
+                  example: https://res.cloudinary.com/.../image/upload/...
                 charity_id:
                   type: integer
                   example: 1
@@ -849,10 +890,15 @@ def create_beneficiary():
     if not charity:
         return jsonify({'msg': 'Charity not found'}), 404
     
+    image_url = None
+    if 'image_url' in data:
+        upload_result = cloudinary.uploader.upload(data['image_url'])
+        image_url = upload_result.get('url')
+    
     new_beneficiary = Beneficiary(
         name=data['name'],
         story=data.get('story', ''),
-        image_url=data.get('image_url', ''),
+        image_url=image_url,
         charity_id=data['charity_id']
     )
     db.session.add(new_beneficiary)
@@ -890,7 +936,7 @@ def get_beneficiary(beneficiary_id):
                   example: A story about Jane Doe
                 image_url:
                   type: string
-                  example: https://example.com/image.jpg
+                  example: https://res.cloudinary.com/.../image/upload/...
                 charity_id:
                   type: integer
                   example: 1
@@ -927,7 +973,7 @@ def update_beneficiary(beneficiary_id):
               example: Updated story about Jane Doe
             image_url:
               type: string
-              example: https://example.com/updated-image.jpg
+              example: base64_encoded_image_data
             charity_id:
               type: integer
               example: 1
@@ -950,7 +996,7 @@ def update_beneficiary(beneficiary_id):
                   example: Updated story about Jane Doe
                 image_url:
                   type: string
-                  example: https://example.com/updated-image.jpg
+                  example: https://res.cloudinary.com/.../image/upload/...
                 charity_id:
                   type: integer
                   example: 1
@@ -965,7 +1011,8 @@ def update_beneficiary(beneficiary_id):
     if 'story' in data:
         beneficiary.story = data['story']
     if 'image_url' in data:
-        beneficiary.image_url = data['image_url']
+        upload_result = cloudinary.uploader.upload(data['image_url'])
+        beneficiary.image_url = upload_result.get('url')
 
     # Update charity_id if provided
     if 'charity_id' in data:
