@@ -552,7 +552,7 @@ def update_unapproved_charity_status(id):
             properties:
               status:
                 type: string
-                example: "Approved" or "Rejected"
+                example: '"Approved" or "Rejected"'
     responses:
       200:
         description: Charity status updated successfully
