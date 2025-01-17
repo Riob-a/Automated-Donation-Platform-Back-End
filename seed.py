@@ -1,5 +1,5 @@
 from app import app, db
-from models import User, Charity, Donation, Beneficiary, Application, Admin
+from models import User, Charity, Donation, Beneficiary, Admin
 import bcrypt
 
 # Sample data
@@ -46,22 +46,22 @@ beneficiaries = [
     }
 ]
 
-applications = [
-    {
-        'name': 'Health & Hygiene',
-        'description': 'A program focused on promoting health and hygiene among school-aged girls.',
-        'website': 'http://healthandhygiene.org',
-        'image_url': 'http://example.com/images/healthandhygiene.jpg',
-        'status': 'Pending'
-    },
-    {
-        'name': 'Tech for Girls',
-        'description': 'Providing technology resources and education to girls in rural areas.',
-        'website': 'http://techforgirls.org',
-        'image_url': 'http://example.com/images/techforgirls.jpg',
-        'status': 'Pending'
-    }
-]
+# applications = [
+#     {
+#         'name': 'Health & Hygiene',
+#         'description': 'A program focused on promoting health and hygiene among school-aged girls.',
+#         'website': 'http://healthandhygiene.org',
+#         'image_url': 'http://example.com/images/healthandhygiene.jpg',
+#         'status': 'Pending'
+#     },
+#     {
+#         'name': 'Tech for Girls',
+#         'description': 'Providing technology resources and education to girls in rural areas.',
+#         'website': 'http://techforgirls.org',
+#         'image_url': 'http://example.com/images/techforgirls.jpg',
+#         'status': 'Pending'
+#     }
+# ]
 
 admins = [
     {'username': 'derrick_admin', 'email': 'admin@example.com', 'password': 'adminsecurepassword'},
@@ -125,15 +125,15 @@ def seed_db():
             db.session.add(beneficiary)
 
         # Seed applications
-        for application_data in applications:
-            application = Application(
-                name=application_data['name'],
-                description=application_data['description'],
-                website=application_data['website'],
-                image_url=application_data['image_url'],
-                status=application_data['status']
-            )
-            db.session.add(application)
+        # for application_data in applications:
+        #     application = Application(
+        #         name=application_data['name'],
+        #         description=application_data['description'],
+        #         website=application_data['website'],
+        #         image_url=application_data['image_url'],
+        #         status=application_data['status']
+        #     )
+        #     db.session.add(application)
 
         # Commit the session
         db.session.commit()

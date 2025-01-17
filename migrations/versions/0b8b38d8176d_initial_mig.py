@@ -1,8 +1,8 @@
-"""Initial mig
+"""initial mig
 
-Revision ID: 8aa0678d26dc
+Revision ID: 0b8b38d8176d
 Revises: 
-Create Date: 2024-08-11 11:04:10.285446
+Create Date: 2025-01-17 18:29:29.817231
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8aa0678d26dc'
+revision = '0b8b38d8176d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -26,16 +26,6 @@ def upgrade():
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     sa.UniqueConstraint('username')
-    )
-    op.create_table('applications',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('description', sa.Text(), nullable=False),
-    sa.Column('website', sa.String(length=200), nullable=True),
-    sa.Column('image_url', sa.String(length=500), nullable=True),
-    sa.Column('date_submitted', sa.DateTime(), nullable=True),
-    sa.Column('status', sa.String(length=20), nullable=True),
-    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('charities',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -103,6 +93,5 @@ def downgrade():
     op.drop_table('unapproved_charities')
     op.drop_table('token_blacklist')
     op.drop_table('charities')
-    op.drop_table('applications')
     op.drop_table('admins')
     # ### end Alembic commands ###
